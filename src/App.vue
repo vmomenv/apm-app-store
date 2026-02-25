@@ -32,15 +32,30 @@
         :active-category="activeCategory"
         :apps-count="filteredApps.length"
         @update-search="handleSearchInput"
+        @search-focus="handleSearchFocus"
         @update="handleUpdate"
         @list="handleList"
+        @open-install-settings="handleOpenInstallSettings"
         @toggle-sidebar="isSidebarOpen = !isSidebarOpen"
       />
-      <AppGrid
-        :apps="filteredApps"
-        :loading="loading"
-        @open-detail="openDetail"
-      />
+      <template v-if="activeCategory === 'home'">
+        <div class="pt-6">
+          <HomeView
+            :links="homeLinks"
+            :lists="homeLists"
+            :loading="homeLoading"
+            :error="homeError"
+            @open-detail="openDetail"
+          />
+        </div>
+      </template>
+      <template v-else>
+        <AppGrid
+          :apps="filteredApps"
+          :loading="loading"
+          @open-detail="openDetail"
+        />
+      </template>
     </main>
 
     <AppDetailModal
@@ -125,6 +140,7 @@ import pino from "pino";
 import AppSidebar from "./components/AppSidebar.vue";
 import AppHeader from "./components/AppHeader.vue";
 import AppGrid from "./components/AppGrid.vue";
+import HomeView from "./components/HomeView.vue";
 import AppDetailModal from "./components/AppDetailModal.vue";
 import ScreenPreview from "./components/ScreenPreview.vue";
 import DownloadQueue from "./components/DownloadQueue.vue";
@@ -177,7 +193,7 @@ const isDarkTheme = computed(() => {
 
 const categories: Ref<Record<string, string>> = ref({});
 const apps: Ref<App[]> = ref([]);
-const activeCategory = ref("all");
+const activeCategory = ref("home");
 const searchQuery = ref("");
 const isSidebarOpen = ref(false);
 const showModal = ref(false);
@@ -279,6 +295,9 @@ const selectCategory = (category: string) => {
   activeCategory.value = category;
   searchQuery.value = "";
   isSidebarOpen.value = false;
+  if (category === "home") {
+    loadHome();
+  }
 };
 
 const openDetail = (app: App) => {
@@ -334,6 +353,67 @@ const closeScreenPreview = () => {
   showPreview.value = false;
 };
 
+// Home data
+const homeLinks = ref<any[]>([]);
+const homeLists = ref<Array<{ title: string; apps: any[] }>>([]);
+const homeLoading = ref(false);
+const homeError = ref("");
+
+const loadHome = async () => {
+  homeLoading.value = true;
+  homeError.value = "";
+  homeLinks.value = [];
+  homeLists.value = [];
+  try {
+    const base = `${APM_STORE_BASE_URL}/${window.apm_store.arch}/home`;
+    // homelinks.json
+    try {
+      const res = await fetch(`${base}/homelinks.json`);
+      if (res.ok) {
+        homeLinks.value = await res.json();
+      }
+    } catch (e) {
+      // ignore single file failures
+      console.warn("Failed to load homelinks.json", e);
+    }
+
+    // homelist.json
+    try {
+      const res2 = await fetch(`${base}/homelist.json`);
+      if (res2.ok) {
+        const lists = await res2.json();
+        for (const item of lists) {
+          if (item.type === "appList" && item.jsonUrl) {
+            try {
+              const url = `${APM_STORE_BASE_URL}/${window.apm_store.arch}${item.jsonUrl}`;
+              const r = await fetch(url);
+              if (r.ok) {
+                const appsJson = await r.json();
+                const apps = (appsJson || []).map((a: any) => ({
+                  name: a.Name || a.name || a.Pkgname || a.PkgName || "",
+                  pkgname: a.Pkgname || a.pkgname || "",
+                  category: a.Category || a.category || "unknown",
+                  more: a.More || a.more || "",
+                  version: a.Version || "",
+                }));
+                homeLists.value.push({ title: item.name || "推荐", apps });
+              }
+            } catch (e) {
+              console.warn("Failed to load home list", item, e);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load homelist.json", e);
+    }
+  } catch (error: unknown) {
+    homeError.value = (error as Error)?.message || "加载首页失败";
+  } finally {
+    homeLoading.value = false;
+  }
+};
+
 const prevScreen = () => {
   if (currentScreenIndex.value > 0) {
     currentScreenIndex.value--;
@@ -354,6 +434,17 @@ const handleUpdate = async () => {
     }
   } catch (error) {
     logger.error(`调用更新工具时出错: ${error}`);
+  }
+};
+
+const handleOpenInstallSettings = async () => {
+  try {
+    const result = await window.ipcRenderer.invoke("open-install-settings");
+    if (!result || !result.success) {
+      logger.warn(`启动安装设置失败: ${result?.message || "未知错误"}`);
+    }
+  } catch (error) {
+    logger.error(`调用安装设置时出错: ${error}`);
   }
 };
 
@@ -705,11 +796,17 @@ const handleSearchInput = (value: string) => {
   searchQuery.value = value;
 };
 
+const handleSearchFocus = () => {
+  if (activeCategory.value === "home") activeCategory.value = "all";
+};
+
 // 生命周期钩子
 onMounted(async () => {
   initTheme();
 
   await loadCategories();
+  // 默认加载主页数据
+  await loadHome();
   // 先显示 loading，并异步开始分批加载应用列表。
   loading.value = true;
   loadApps(() => {

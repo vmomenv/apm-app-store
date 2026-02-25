@@ -160,6 +160,24 @@ ipcMain.handle("run-update-tool", async () => {
   }
 });
 
+// 启动安装设置脚本（可能需要提升权限）
+ipcMain.handle("open-install-settings", async () => {
+  try {
+    const { spawn } = await import("node:child_process");
+    const scriptPath = "/opt/durapps/spark-store/bin/update-upgrade/ss-update-controler.sh";
+    const child = spawn("/opt/spark-store/extras/host-spawn", [scriptPath], {
+      detached: true,
+      stdio: "ignore",
+    });
+    child.unref();
+    logger.info(`Launched ${scriptPath}`);
+    return { success: true };
+  } catch (err) {
+    logger.error({ err }, "Failed to launch install settings script");
+    return { success: false, message: (err as Error)?.message || String(err) };
+  }
+});
+
 app.whenReady().then(() => {
   // Set User-Agent for client
   session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {

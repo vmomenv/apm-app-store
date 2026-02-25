@@ -18,29 +18,33 @@
           alt="应用截图预览"
           class="max-h-[80vh] w-full rounded-3xl border border-slate-200/40 bg-black/40 object-contain shadow-2xl dark:border-slate-700"
         />
-        <div
-          class="absolute inset-x-0 top-4 flex items-center justify-between px-6"
-        >
-          <div class="flex gap-3">
-            <button
-              type="button"
-              class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/80 text-slate-700 shadow-lg transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-              @click="prevScreen"
-              :disabled="currentScreenIndex === 0"
-              aria-label="上一张"
-            >
-              <i class="fas fa-chevron-left"></i>
-            </button>
-            <button
-              type="button"
-              class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/80 text-slate-700 shadow-lg transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-              @click="nextScreen"
-              :disabled="currentScreenIndex === screenshots.length - 1"
-              aria-label="下一张"
-            >
-              <i class="fas fa-chevron-right"></i>
-            </button>
-          </div>
+        <!-- 左右侧按钮，分别放置在图片两侧，垂直居中 -->
+        <div class="absolute left-4 top-1/2 transform -translate-y-1/2">
+          <button
+            type="button"
+            class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/80 text-slate-700 shadow-lg transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            @click="prevScreen"
+            :disabled="currentScreenIndex === 0"
+            aria-label="上一张"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
+        </div>
+
+        <div class="absolute right-4 top-1/2 transform -translate-y-1/2">
+          <button
+            type="button"
+            class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/80 text-slate-700 shadow-lg transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            @click="nextScreen"
+            :disabled="currentScreenIndex === screenshots.length - 1"
+            aria-label="下一张"
+          >
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+
+        <!-- 仍保留右上关闭按钮 -->
+        <div class="absolute top-4 right-4">
           <button
             type="button"
             class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/80 text-slate-700 shadow-lg transition hover:bg-white"

@@ -325,6 +325,47 @@ export const APM_STORE_BASE_URL = 'https://erotica.spark-app.store';
 // /{arch}/{category}/{pkgname}/icon.png  - App icon
 // /{arch}/{category}/{pkgname}/screen_N.png - Screenshots (1-5)
 // /{arch}/categories.json                - Categories mapping
+
+### Home (主页) 页面数据
+
+The store may provide a special `home` directory under `{arch}` for a localized homepage. Two JSON files are expected:
+
+- `homelinks.json` — 用于构建首页的轮播或链接块。每个条目示例:
+
+```json
+{
+  "name": "交流反馈",
+  "more": "前往论坛交流讨论",
+  "imgUrl": "/home/links/bbs.png",
+  "type": "_blank",
+  "url": "https://bbs.spark-app.store/"
+}
+```
+
+- `homelist.json` — 描述若干推荐应用列表，每项引用一个 JSON 列表（`jsonUrl`）: 
+
+```json
+[
+  { "name":"装机必备", "type":"appList", "jsonUrl":"/home/lists/NecessaryforInstallation.json" }
+]
+```
+
+Parsing rules used by the app:
+- Resolve `imgUrl` by prefixing: `${APM_STORE_BASE_URL}/{arch}${imgUrl}`.
+- `type: _blank` → 使用系统浏览器打开链接；`type: _self` → 在当前页面打开。
+- For `homelist.json` entries with `type: "appList"`, fetch the referenced `jsonUrl` and map each item to the app shape used by the UI:
+  - `Name` → `name`
+  - `Pkgname` → `pkgname`
+  - `Category` → `category`
+  - `More` → `more`
+
+Where to implement:
+- Renderer: `src/App.vue` loads and normalizes `homelinks.json` and `homelist.json` on selecting the `home` category and exposes data to a new `HomeView` component.
+- Component: `src/components/HomeView.vue` renders link cards and recommended app sections (re-uses `AppCard.vue`).
+
+Notes:
+- The `home` directory path is: `/{arch}/home/` under the configured `APM_STORE_BASE_URL`.
+- Missing or partially invalid files are handled gracefully — individual failures don't block showing other home sections.
 ```
 
 ### Axios Usage

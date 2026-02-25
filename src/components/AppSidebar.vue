@@ -34,6 +34,19 @@
         type="button"
         class="flex w-full items-center gap-3 rounded-2xl border border-transparent px-4 py-3 text-left text-sm font-medium text-slate-600 transition hover:border-brand/30 hover:bg-brand/5 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 dark:text-slate-300 dark:hover:bg-slate-800"
         :class="
+          activeCategory === 'home'
+            ? 'border-brand/40 bg-brand/10 text-brand dark:bg-brand/15'
+            : ''
+        "
+        @click="selectCategory('home')"
+      >
+        <span>主页</span>
+      </button>
+
+      <button
+        type="button"
+        class="flex w-full items-center gap-3 rounded-2xl border border-transparent px-4 py-3 text-left text-sm font-medium text-slate-600 transition hover:border-brand/30 hover:bg-brand/5 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 dark:text-slate-300 dark:hover:bg-slate-800"
+        :class="
           activeCategory === 'all'
             ? 'border-brand/40 bg-brand/10 text-brand dark:bg-brand/15'
             : ''
