@@ -403,13 +403,38 @@ const loadHome = async () => {
               const r = await fetch(url);
               if (r.ok) {
                 const appsJson = await r.json();
-                const apps = (appsJson || []).map((a: any) => ({
-                  name: a.Name || a.name || a.Pkgname || a.PkgName || "",
-                  pkgname: a.Pkgname || a.pkgname || "",
-                  category: a.Category || a.category || "unknown",
-                  more: a.More || a.more || "",
-                  version: a.Version || "",
-                }));
+                const rawApps = appsJson || [];
+                const apps = await Promise.all(
+                  rawApps.map(async (a: any) => {
+                    const baseApp = {
+                      name: a.Name || a.name || a.Pkgname || a.PkgName || "",
+                      pkgname: a.Pkgname || a.pkgname || "",
+                      category: a.Category || a.category || "unknown",
+                      more: a.More || a.more || "",
+                      version: a.Version || "",
+                      filename: a.Filename || a.filename || "",
+                    };
+
+                    // 根据官网的要求，读取Category和Pkgname，拼接出 源地址/架构/Category/Pkgname/app.json来获取对应的真实json
+                    try {
+                      const realAppUrl = `${APM_STORE_BASE_URL}/${window.apm_store.arch}/${baseApp.category}/${baseApp.pkgname}/app.json`;
+                      const realRes = await fetch(realAppUrl);
+                      if (realRes.ok) {
+                        const realApp = await realRes.json();
+                        // 用真实json的filename字段和More字段来增补和覆盖当前的json
+                        if (realApp.Filename) baseApp.filename = realApp.Filename;
+                        if (realApp.More) baseApp.more = realApp.More;
+                        if (realApp.Name) baseApp.name = realApp.Name;
+                      }
+                    } catch (e) {
+                      console.warn(
+                        `Failed to fetch real app.json for ${baseApp.pkgname}`,
+                        e,
+                      );
+                    }
+                    return baseApp;
+                  }),
+                );
                 homeLists.value.push({ title: item.name || "推荐", apps });
               }
             } catch (e) {
