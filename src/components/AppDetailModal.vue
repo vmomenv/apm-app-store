@@ -21,12 +21,15 @@
             <div
               class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-b from-slate-100 to-slate-200 shadow-inner dark:from-slate-800 dark:to-slate-700"
             >
-              <img
-                v-if="app"
-                :src="iconPath"
-                alt="icon"
-                class="h-full w-full object-cover"
-              />
+                <img
+                  v-if="app"
+                  :src="iconPath"
+                  alt="icon"
+                  class="h-full w-full object-cover transition-opacity duration-300"
+                  :class="isIconLoaded ? 'opacity-100' : 'opacity-0'"
+                  loading="lazy"
+                  @load="isIconLoaded = true"
+                />
             </div>
             <div class="space-y-1">
               <div class="flex items-center gap-3">
@@ -108,7 +111,8 @@
             :key="index"
             :src="screen"
             alt="screenshot"
-            class="h-40 w-full cursor-pointer rounded-2xl border border-slate-200/60 object-cover shadow-sm transition hover:-translate-y-1 hover:shadow-lg dark:border-slate-800/60"
+            class="h-40 w-full cursor-pointer rounded-2xl border border-slate-200/60 object-cover shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-slate-800/60"
+            loading="lazy"
             @click="openPreview(index)"
             @error="hideImage"
           />
@@ -228,6 +232,15 @@ const emit = defineEmits<{
 }>();
 
 const appPkgname = computed(() => props.app?.pkgname);
+
+const isIconLoaded = ref(false);
+
+watch(
+  () => props.app,
+  () => {
+    isIconLoaded.value = false;
+  },
+);
 
 const activeDownload = computed(() => {
   return downloads.value.find((d) => d.pkgname === props.app?.pkgname);

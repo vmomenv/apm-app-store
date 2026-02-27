@@ -349,11 +349,7 @@ const loadScreenshots = (app: App) => {
   screenshots.value = [];
   for (let i = 1; i <= 5; i++) {
     const screenshotUrl = `${APM_STORE_BASE_URL}/${window.apm_store.arch}/${app.category}/${app.pkgname}/screen_${i}.png`;
-    const img = new Image();
-    img.src = screenshotUrl;
-    img.onload = () => {
-      screenshots.value.push(screenshotUrl);
-    };
+    screenshots.value.push(screenshotUrl);
   }
 };
 
