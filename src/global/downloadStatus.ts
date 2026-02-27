@@ -12,7 +12,7 @@ export function removeDownloadItem(pkgname: string) {
   }
 }
 
-export function watchDownloadsChange(cb: () => void) {
+export function watchDownloadsChange(cb: (pkgname: string) => void) {
   const statusById = new Map<number, DownloadItemStatus>();
 
   for (const item of downloads.value) {
@@ -25,7 +25,7 @@ export function watchDownloadsChange(cb: () => void) {
       for (const item of list) {
         const prevStatus = statusById.get(item.id);
         if (item.status === "completed" && prevStatus !== "completed") {
-          cb();
+          cb(item.pkgname);
         }
         statusById.set(item.id, item.status);
       }

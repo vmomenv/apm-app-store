@@ -412,27 +412,41 @@ ipcMain.handle("check-installed", async (_event, pkgname: string) => {
   const checkScript = "/opt/spark-store/extras/check-is-installed";
   let isInstalled = false;
 
-  const child = spawn(checkScript, [pkgname], {
-    shell: false,
-    env: process.env,
-  });
-
-  await new Promise<void>((resolve) => {
-    child.on("error", (err) => {
-      logger.error(`check-installed 执行失败: ${err?.message || err}`);
-      resolve();
+  // 首先尝试使用内置脚本
+  if (fs.existsSync(checkScript)) {
+    const child = spawn(checkScript, [pkgname], {
+      shell: false,
+      env: process.env,
     });
 
-    child.on("close", (code) => {
-      if (code === 0) {
-        isInstalled = true;
-        logger.info(`应用已安装: ${pkgname}`);
-      } else {
-        logger.info(`应用未安装: ${pkgname} (exit ${code})`);
-      }
-      resolve();
+    await new Promise<void>((resolve) => {
+      child.on("error", (err) => {
+        logger.error(`check-installed 脚本执行失败: ${err?.message || err}`);
+        resolve();
+      });
+
+      child.on("close", (code) => {
+        if (code === 0) {
+          isInstalled = true;
+          logger.info(`应用已安装 (脚本检测): ${pkgname}`);
+        }
+        resolve();
+      });
     });
-  });
+
+    if (isInstalled) return true;
+  }
+
+  // 如果脚本不存在或检测不到，使用 dpkg-query 作为后备
+  logger.info(`尝试使用 dpkg-query 检测: ${pkgname}`);
+  const { code } = await runCommandCapture("dpkg-query", ["-W", "-f='${Status}'", pkgname]);
+
+  if (code === 0) {
+    isInstalled = true;
+    logger.info(`应用已安装 (dpkg-query 检测): ${pkgname}`);
+  } else {
+    logger.info(`应用未安装: ${pkgname}`);
+  }
 
   return isInstalled;
 });
@@ -456,7 +470,7 @@ ipcMain.on("remove-installed", async (_event, pkgname: string) => {
   }
   const child = spawn(
     execCommand,
-    [...execParams, "aptss", "remove", pkgname ],
+    [...execParams, "aptss", "remove", pkgname],
     {
       shell: true,
       env: process.env,
@@ -579,8 +593,8 @@ ipcMain.handle("launch-app", async (_event, pkgname: string) => {
     logger.warn("No pkgname provided for launch-app");
   }
 
-  const execCommand = "/opt/spark-store/extras/host-spawn";
-  const execParams = ["/opt/spark-store/extras/app-launcher", "launch", pkgname];
+  const execCommand = "/opt/spark-store/extras/app-launcher";
+  const execParams = ["start", pkgname];
 
   logger.info(
     `Launching app: ${pkgname} with command: ${execCommand} ${execParams.join(" ")}`,

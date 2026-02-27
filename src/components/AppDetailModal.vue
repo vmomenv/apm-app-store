@@ -236,8 +236,10 @@ const activeDownload = computed(() => {
 const { installFeedback } = useInstallFeedback(appPkgname);
 const { isCompleted } = useDownloadItemStatus(appPkgname);
 const installBtnText = computed(() => {
+  if (props.isinstalled) {
+    return "已安装";
+  }
   if (isCompleted.value) {
-    // TODO: 似乎有一个时间差，安装好了之后并不是立马就可以从已安装列表看见
     return "已安装";
   }
   if (installFeedback.value) {
