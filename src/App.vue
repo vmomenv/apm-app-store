@@ -180,7 +180,7 @@ const axiosInstance = axios.create({
   timeout: 5000, // 增加到 5 秒，避免网络波动导致的超时
 });
 
-const fetchWithRetry = async <T>(
+const fetchWithRetry = async <T,>(
   url: string,
   retries = 3,
   delay = 1000,
@@ -422,7 +422,8 @@ const loadHome = async () => {
                       if (realRes.ok) {
                         const realApp = await realRes.json();
                         // 用真实json的filename字段和More字段来增补和覆盖当前的json
-                        if (realApp.Filename) baseApp.filename = realApp.Filename;
+                        if (realApp.Filename)
+                          baseApp.filename = realApp.Filename;
                         if (realApp.More) baseApp.more = realApp.More;
                         if (realApp.Name) baseApp.name = realApp.Name;
                       }

@@ -164,7 +164,8 @@ ipcMain.handle("run-update-tool", async () => {
 ipcMain.handle("open-install-settings", async () => {
   try {
     const { spawn } = await import("node:child_process");
-    const scriptPath = "/opt/durapps/spark-store/bin/update-upgrade/ss-update-controler.sh";
+    const scriptPath =
+      "/opt/durapps/spark-store/bin/update-upgrade/ss-update-controler.sh";
     const child = spawn("/opt/spark-store/extras/host-spawn", [scriptPath], {
       detached: true,
       stdio: "ignore",

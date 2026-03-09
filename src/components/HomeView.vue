@@ -1,6 +1,8 @@
 <template>
   <div class="space-y-6">
-    <div v-if="loading" class="text-center text-slate-500">正在加载首页内容…</div>
+    <div v-if="loading" class="text-center text-slate-500">
+      正在加载首页内容…
+    </div>
     <div v-else-if="error" class="text-center text-rose-600">{{ error }}</div>
     <div v-else>
       <div class="grid gap-4 auto-fit-grid">
@@ -17,7 +19,9 @@
             class="h-20 w-full object-contain"
             loading="lazy"
           />
-          <div class="text-base font-semibold text-slate-900">{{ link.name }}</div>
+          <div class="text-base font-semibold text-slate-900">
+            {{ link.name }}
+          </div>
           <div class="text-sm text-slate-500">{{ link.more }}</div>
         </a>
       </div>
@@ -25,7 +29,9 @@
       <div class="space-y-6 mt-6">
         <section v-for="section in lists" :key="section.title">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-slate-900">{{ section.title }}</h3>
+            <h3 class="text-lg font-semibold text-slate-900">
+              {{ section.title }}
+            </h3>
           </div>
           <div class="mt-3 grid gap-4 auto-fit-grid">
             <AppCard

@@ -182,7 +182,11 @@ ipcMain.on("queue-install", async (event, download_json) => {
     execParams.push(SHELL_CALLER_PATH);
 
     if (metalinkUrl && filename) {
-      execParams.push("ssinstall", `${downloadDir}/${filename}`, "--delete-after-install");
+      execParams.push(
+        "ssinstall",
+        `${downloadDir}/${filename}`,
+        "--delete-after-install",
+      );
     } else {
       execParams.push("aptss", "install", "-y", pkgname);
     }
@@ -190,7 +194,11 @@ ipcMain.on("queue-install", async (event, download_json) => {
     execCommand = SHELL_CALLER_PATH;
 
     if (metalinkUrl && filename) {
-      execParams.push("ssinstall", `${downloadDir}/${filename}`, "--delete-after-install");
+      execParams.push(
+        "ssinstall",
+        `${downloadDir}/${filename}`,
+        "--delete-after-install",
+      );
     } else {
       execParams.push("aptss", "install", "-y", pkgname);
     }
@@ -439,7 +447,11 @@ ipcMain.handle("check-installed", async (_event, pkgname: string) => {
 
   // 如果脚本不存在或检测不到，使用 dpkg-query 作为后备
   logger.info(`尝试使用 dpkg-query 检测: ${pkgname}`);
-  const { code } = await runCommandCapture("dpkg-query", ["-W", "-f='${Status}'", pkgname]);
+  const { code } = await runCommandCapture("dpkg-query", [
+    "-W",
+    "-f='${Status}'",
+    pkgname,
+  ]);
 
   if (code === 0) {
     isInstalled = true;

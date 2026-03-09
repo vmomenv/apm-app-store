@@ -10,7 +10,11 @@
         >
           <i class="fas fa-bars"></i>
         </button>
-        <TopActions @update="$emit('update')" @list="$emit('list')" @open-install-settings="$emit('open-install-settings')" />
+        <TopActions
+          @update="$emit('update')"
+          @list="$emit('list')"
+          @open-install-settings="$emit('open-install-settings')"
+        />
       </div>
       <div class="w-full flex-1">
         <label for="searchBox" class="sr-only">搜索应用</label>
@@ -29,8 +33,12 @@
         </div>
       </div>
     </div>
-    <div v-if="activeCategory !== 'home'" class="text-sm text-slate-500 dark:text-slate-400" id="currentCount">
-      共 {{ appsCount }} 个应用 
+    <div
+      v-if="activeCategory !== 'home'"
+      class="text-sm text-slate-500 dark:text-slate-400"
+      id="currentCount"
+    >
+      共 {{ appsCount }} 个应用
     </div>
   </div>
 </template>

@@ -21,15 +21,15 @@
             <div
               class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-b from-slate-100 to-slate-200 shadow-inner dark:from-slate-800 dark:to-slate-700"
             >
-                <img
-                  v-if="app"
-                  :src="iconPath"
-                  alt="icon"
-                  class="h-full w-full object-cover transition-opacity duration-300"
-                  :class="isIconLoaded ? 'opacity-100' : 'opacity-0'"
-                  loading="lazy"
-                  @load="isIconLoaded = true"
-                />
+              <img
+                v-if="app"
+                :src="iconPath"
+                alt="icon"
+                class="h-full w-full object-cover transition-opacity duration-300"
+                :class="isIconLoaded ? 'opacity-100' : 'opacity-0'"
+                loading="lazy"
+                @load="isIconLoaded = true"
+              />
             </div>
             <div class="space-y-1">
               <div class="flex items-center gap-3">
