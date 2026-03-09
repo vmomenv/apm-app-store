@@ -51,15 +51,15 @@
 import AppCard from "./AppCard.vue";
 import { APM_STORE_BASE_URL } from "../global/storeConfig";
 
-const props = defineProps<{
-  links: Array<any>;
-  lists: Array<{ title: string; apps: any[] }>;
+defineProps<{
+  links: Array<Record<string, unknown>>;
+  lists: Array<{ title: string; apps: Record<string, unknown>[] }>;
   loading: boolean;
   error: string;
 }>();
 
-const emit = defineEmits<{
-  (e: "open-detail", app: any): void;
+defineEmits<{
+  (e: "open-detail", app: Record<string, unknown>): void;
 }>();
 
 const computedImgUrl = (imgUrl: string) => {
@@ -68,7 +68,7 @@ const computedImgUrl = (imgUrl: string) => {
   return `${APM_STORE_BASE_URL}/${window.apm_store.arch}${imgUrl}`;
 };
 
-const onLinkClick = (link: any) => {
+const onLinkClick = (link: Record<string, unknown>) => {
   if (link.type === "_blank") {
     window.open(link.url, "_blank");
   } else {

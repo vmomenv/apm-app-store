@@ -41,10 +41,6 @@ const handleUpdate = () => {
   emit("update");
 };
 
-const handleList = () => {
-  emit("list");
-};
-
 const handleSettings = () => {
   emit("open-install-settings");
 };

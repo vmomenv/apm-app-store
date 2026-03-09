@@ -13,6 +13,7 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/__tests__/setup.ts"],
+    include: ["src/__tests__/unit/**/*.test.ts", "src/__tests__/unit/**/*.spec.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html", "lcov"],
@@ -28,10 +29,12 @@ export default defineConfig({
         "**/*.test.ts",
         "electron/",
       ],
-      statements: 70,
-      branches: 70,
-      functions: 70,
-      lines: 70,
+      thresholds: {
+        statements: 70,
+        branches: 70,
+        functions: 70,
+        lines: 70,
+      }
     },
   },
 });

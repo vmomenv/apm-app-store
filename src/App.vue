@@ -368,8 +368,10 @@ const closeScreenPreview = () => {
 };
 
 // Home data
-const homeLinks = ref<any[]>([]);
-const homeLists = ref<Array<{ title: string; apps: any[] }>>([]);
+const homeLinks = ref<Record<string, unknown>[]>([]);
+const homeLists = ref<
+  Array<{ title: string; apps: Record<string, unknown>[] }>
+>([]);
 const homeLoading = ref(false);
 const homeError = ref("");
 
@@ -405,7 +407,7 @@ const loadHome = async () => {
                 const appsJson = await r.json();
                 const rawApps = appsJson || [];
                 const apps = await Promise.all(
-                  rawApps.map(async (a: any) => {
+                  rawApps.map(async (a: Record<string, unknown>) => {
                     const baseApp = {
                       name: a.Name || a.name || a.Pkgname || a.PkgName || "",
                       pkgname: a.Pkgname || a.pkgname || "",

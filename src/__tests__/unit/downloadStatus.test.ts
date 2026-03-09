@@ -1,9 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import {
-  downloads,
-  addDownload,
-  removeDownloadItem,
-} from "@/global/downloadStatus";
+import { downloads, removeDownloadItem } from "@/global/downloadStatus";
 import type { DownloadItem } from "@/global/typedefinition";
 
 describe("downloadStatus", () => {
@@ -31,7 +27,7 @@ describe("downloadStatus", () => {
         retry: false,
       };
 
-      addDownload(mockDownload);
+      downloads.value.push(mockDownload);
 
       expect(downloads.value).toHaveLength(1);
       expect(downloads.value[0].pkgname).toBe("test-app");

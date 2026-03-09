@@ -222,16 +222,16 @@ app.on("will-quit", () => {
 // 获取图标路径
 function getIconPath() {
   let iconPath = "";
-  const iconFile =
-    process.platform === "win32" ? "amber-pm-logo.ico" : "spark-store.svg"; // 图标文件名，linux下需要png格式，不然会不显示
+  const iconName =
+    process.platform === "win32" ? "amber-pm-logo.ico" : "amber-pm-logo.png"; // 图标文件名，linux下需要png格式，不然会不显示
   // 判断是否在打包模式
   if (app.isPackaged) {
     // 打包模式
-    iconPath = path.join(process.resourcesPath, "icons", iconFile); // 路径根据自身情况调整
+    iconPath = path.join(process.resourcesPath, "icons", iconName); // 路径根据自身情况调整
   } else {
     // 开发模式
     const projectRoot = path.join(__dirname, "../.."); // __dirname 指向 dist-electron/main，但资源在项目根目录，所以..指向上一级
-    iconPath = path.join(projectRoot, "icons", iconFile);
+    iconPath = path.join(projectRoot, "icons", iconName);
   }
 
   // 检查文件是否存在
