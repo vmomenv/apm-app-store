@@ -1,121 +1,128 @@
-# AI Coding Guidance for APM App Store
+# APM 应用商店 - AI 编码指南
 
-**Repository:** elysia-best/apm-app-store  
-**Project Type:** Electron + Vue 3 + Vite Desktop Application  
-**Purpose:** Desktop app store client for APM (AmberPM) package manager  
-**License:** MulanPSL-2.0
+**仓库:** elysia-best/apm-app-store
+**项目类型:** Electron + Vue 3 + Vite 桌面应用
+**用途:** APM (AmberPM) 包管理器的桌面应用商店客户端
+**许可证:** GPL-3.0
 
 ---
 
-If you are an AI coding agent working on this repo, make sure to follow the guidelines below:
+如果你是 AI 编码代理，在此仓库工作时，请遵循以下指南：
 
-## 🏗️ Project Architecture Overview
+## 🏗️ 项目架构概览
 
-### Technology Stack
-- **Frontend Framework:** Vue 3 with Composition API (`<script setup>`)
-- **Build Tool:** Vite 6.4.1
-- **Desktop Framework:** Electron 40.0.0
-- **UI Framework:** Tailwind CSS 4.1.18
-- **Language:** TypeScript (strict mode enabled)
-- **State Management:** Vue reactivity system (ref, computed)
-- **HTTP Client:** Axios 1.13.2
-- **Logging:** Pino logger
+### 技术栈
 
-### Directory Structure
+- **前端框架:** Vue 3 with Composition API (`<script setup>`)
+- **构建工具:** Vite 6.4.1
+- **桌面框架:** Electron 40.0.0
+- **UI 框架:** Tailwind CSS 4.1.18
+- **语言:** TypeScript (严格模式已启用)
+- **状态管理:** Vue 响应式系统 (ref, computed)
+- **HTTP 客户端:** Axios 1.13.2
+- **日志:** Pino logger
+
+### 目录结构
 
 ```
 apm-app-store/
-├── electron/                    # Electron main process
+├── electron/                    # Electron 主进程
 │   ├── main/
-│   │   ├── backend/             # Backend logic (e.g. install manager)
-│   │   │   └── install-manager.ts  # Core installation/package management
-│   │   ├── deeplink.ts          # Deep link protocol handling
-│   │   ├── handle-url-scheme.ts # URL scheme handler
-│   │   └── index.ts             # Main process entry point
+│   │   ├── backend/             # 后端逻辑 (如安装管理器)
+│   │   │   └── install-manager.ts  # 核心安装/包管理
+│   │   ├── deeplink.ts          # Deep Link 协议处理
+│   │   ├── handle-url-scheme.ts # URL Scheme 处理器
+│   │   └── index.ts             # 主进程入口点
 │   ├── preload/
-│   │   └── index.ts             # Preload script (IPC bridge)
-│   └── global.ts                # Shared state between processes
-├── src/                         # Vue renderer process
-│   ├── components/              # Vue components (modals, cards, grids)
-│   ├── global/                  # Global config and state
-│   │   ├── downloadStatus.ts    # Download queue management
-│   │   ├── storeConfig.ts       # API config and shared state
-│   │   └── typedefinition.ts    # TypeScript type definitions
-│   ├── modules/                 # Business logic modules
-│   │   └── processInstall.ts    # Install/uninstall logic
-│   ├── assets/                  # CSS/images
-│   ├── App.vue                  # Root component
-│   └── main.ts                  # Renderer entry point
-├── extras/                      # Shell scripts and policy files
-├── icons/                       # Application icons
-├── scripts/                     # Maintenance scripts
-├── public/                      # Public assets
-├── electron-builder.yml         # Build configuration
-├── vite.config.ts               # Vite configuration
-├── tsconfig.json                # TypeScript configuration
-├── eslint.config.ts             # ESLint configuration
-└── package.json                 # Dependencies and scripts
+│   │   └── index.ts             # 预加载脚本 (IPC 桥梁)
+│   └── global.ts                # 进程间共享状态
+├── src/                         # Vue 渲染进程
+│   ├── components/              # Vue 组件 (模态框、卡片、网格)
+│   ├── global/                  # 全局配置和状态
+│   │   ├── downloadStatus.ts    # 下载队列管理
+│   │   ├── storeConfig.ts       # API 配置和共享状态
+│   │   └── typedefinition.ts    # TypeScript 类型定义
+│   ├── modules/                 # 业务逻辑模块
+│   │   └── processInstall.ts    # 安装/卸载逻辑
+│   ├── assets/                  # CSS/图片
+│   ├── App.vue                  # 根组件
+│   └── main.ts                  # 渲染进程入口
+├── extras/                      # Shell 脚本和策略文件
+├── icons/                       # 应用图标
+├── scripts/                     # 维护脚本
+├── public/                      # 公共资源
+├── electron-builder.yml         # 构建配置
+├── vite.config.ts               # Vite 配置
+├── tsconfig.json                # TypeScript 配置
+├── eslint.config.ts             # ESLint 配置
+└── package.json                 # 依赖和脚本
 ```
 
 ---
 
-## 🎯 Core Concepts
+## 🎯 核心概念
 
-### 1. APM Package Manager Integration
-The app acts as a GUI frontend for the APM CLI tool (`/opt/spark-store/extras/shell-caller.sh`).
+### 1. APM 包管理器集成
 
-**Key Operations:**
-- `apm install -y <pkgname>` - Install package
-- `apm remove -y <pkgname>` - Uninstall package
-- `apm list --installed` - List installed packages
-- `apm list --upgradable` - List upgradable packages
+本应用作为 APM CLI 工具 (`/opt/spark-store/extras/shell-caller.sh`) 的 GUI 前端。
 
-**Important:** All APM operations require privilege escalation via `pkexec` on Linux.
+**关键操作:**
 
-### 2. IPC Communication Pattern
+- `apm install -y <pkgname>` - 安装包
+- `apm remove -y <pkgname>` - 卸载包
+- `apm list --installed` - 列出已安装的包
+- `apm list --upgradable` - 列出可升级的包
 
-**Main Process (Node.js) ⟷ Renderer Process (Browser)**
+**重要:** 在 Linux 上，所有 APM 操作都需要通过 `pkexec` 进行权限提升。
+
+### 2. IPC 通信模式
+
+**主进程 (Node.js) ⟷ 渲染进程 (浏览器)**
 
 ```typescript
-// In Renderer (Vue):
+// 在渲染进程中 (Vue):
 window.ipcRenderer.send('queue-install', JSON.stringify(download));
 window.ipcRenderer.invoke('list-installed');
 window.ipcRenderer.on('install-complete', (event, result) => { /* ... */ });
 
-// In Main Process (Electron):
+// 在主进程中 (Electron):
 ipcMain.on('queue-install', async (event, download_json) => { /* ... */ });
 ipcMain.handle('list-installed', async () => { /* ... */ });
 event.sender.send('install-complete', { id, success, ... });
 ```
 
-**Exposed APIs in Preload:**
-- `window.ipcRenderer.on/off/send/invoke` - IPC communication
-- `window.apm_store.arch` - System architecture detection (amd64-store, arm64-store)
+**在 Preload 中暴露的 API:**
 
-### 3. Installation Queue System
+- `window.ipcRenderer.on/off/send/invoke` - IPC 通信
+- `window.apm_store.arch` - 系统架构检测 (amd64-store, arm64-store)
 
-**Location:** `electron/main/backend/install-manager.ts`
+### 3. 安装队列系统
 
-**Key Features:**
-- Single-task sequential processing (only one installation at a time)
-- Task queue managed via `Map<number, InstallTask>`
-- Real-time progress streaming via IPC events
-- Automatic privilege escalation detection
+**位置:** `electron/main/backend/install-manager.ts`
 
-**Task Lifecycle:**
-1. Renderer sends `queue-install` with task ID and package name
-2. Main process checks for duplicate tasks
-3. Task added to queue with status `queued`
-4. `processNextInQueue()` spawns child process
-5. stdout/stderr streamed to renderer via `install-log`
-6. Completion signaled via `install-complete` with exit code
+**关键特性:**
 
-**Critical Pattern:**
+- 单任务顺序处理（一次只能安装一个应用）
+- 通过 `Map<number, InstallTask>` 管理任务队列
+- 通过 IPC 事件实时流式传输进度
+- 自动检测权限提升
+
+**任务生命周期:**
+
+1. 渲染进程发送 `queue-install`，包含任务 ID 和包名
+2. 主进程检查是否有重复任务
+3. 任务加入队列，状态为 `queued`
+4. `processNextInQueue()` 生成子进程
+5. stdout/stderr 通过 `install-log` 流式传输到渲染进程
+6. 通过 `install-complete` 发送完成信号和退出码
+
+**关键模式:**
+
 ```typescript
-// Always check if idle before processing
+// 在处理前始终检查是否空闲
 if (idle) processNextInQueue(0);
 
-// After task completion, check for more tasks
+// 任务完成后，检查是否有更多任务
 tasks.delete(task.id);
 idle = true;
 if (tasks.size > 0) processNextInQueue(0);
@@ -123,51 +130,54 @@ if (tasks.size > 0) processNextInQueue(0);
 
 ---
 
-## 📝 Type System Guidelines
+## 📝 类型系统指南
 
-Important: DO NOT use any in the code!
+**重要:** 不要在代码中使用 any！
 
-### Core Types (src/global/typedefinition.ts)
+### 核心类型 (src/global/typedefinition.ts)
 
-#### App Data Structure
+#### 应用数据结构
+
 ```typescript
-// Raw JSON from API (PascalCase)
+// 从 API 返回的原始 JSON (PascalCase)
 interface AppJson {
   Name: string;
   Pkgname: string;
   Version: string;
   Filename: string;
-  // ... (follows upstream API format)
+  // ... (遵循上游 API 格式)
 }
 
-// Normalized app data (camelCase)
+// 标准化的应用数据 (camelCase)
 interface App {
   name: string;
-  pkgname: string;           // Primary identifier
+  pkgname: string; // 主要标识符
   version: string;
-  category: string;          // Added by frontend
+  category: string; // 由前端添加
   currentStatus: "not-installed" | "installed";
-  flags?: string;            // e.g., "automatic" for dependencies
-  arch?: string;             // e.g., "amd64", "arm64"
-  // ... (full spec in typedefinition.ts)
+  flags?: string; // 例如: "automatic" 表示依赖
+  arch?: string; // 例如: "amd64", "arm64"
+  // ... (完整定义见 typedefinition.ts)
 }
 ```
 
-#### Download/Installation Task
+#### 下载/安装任务
+
 ```typescript
 interface DownloadItem {
-  id: number;                // Unique task ID
-  pkgname: string;           // Package identifier
+  id: number; // 唯一任务 ID
+  pkgname: string; // 包标识符
   status: DownloadItemStatus; // "queued" | "installing" | "completed" | "failed" | "paused"
-  progress: number;          // 0-100
+  progress: number; // 0-100
   logs: Array<{ time: number; message: string }>;
-  retry: boolean;            // Retry flag
-  upgradeOnly?: boolean;     // For upgrade operations
-  // ... (see full spec)
+  retry: boolean; // 重试标志
+  upgradeOnly?: boolean; // 用于升级操作
+  // ... (完整定义)
 }
 ```
 
-#### IPC Payloads
+#### IPC 负载
+
 ```typescript
 interface InstallLog {
   id: number;
@@ -183,119 +193,136 @@ interface DownloadResult extends InstallLog {
 
 ---
 
-## 🎨 Vue Component Patterns
+## 🎨 Vue 组件模式
 
-### Composition API Best Practices
+### Composition API 最佳实践
 
 ```typescript
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import type { Ref } from 'vue';
 
-// Reactive state
+// 响应式状态
 const apps: Ref<App[]> = ref([]);
 const loading = ref(true);
 
-// Computed properties
+// 计算属性
 const filteredApps = computed(() => {
   return apps.value.filter(/* ... */);
 });
 
-// Lifecycle hooks
+// 生命周期钩子
 onMounted(async () => {
   await loadCategories();
   await loadApps();
 });
 
-// Methods (use arrow functions or function declarations)
+// 方法 (使用箭头函数或函数声明)
 const handleInstall = () => {
-  // Implementation
+  // 实现
 };
 </script>
 ```
 
-### Props and Events Pattern
+### Props 和 Events 模式
 
 ```typescript
-// Props definition
+// Props 定义
 const props = defineProps<{
   app: App | null;
   show: boolean;
 }>();
 
-// Emits definition
+// Emits 定义
 const emit = defineEmits<{
   close: [];
   install: [];
   remove: [];
 }>();
 
-// Usage
-emit('install');
+// 使用
+emit("install");
 ```
 
-### IPC Event Listeners in Vue
+### Vue 中的 IPC 事件监听
 
-**Always use in `onMounted` for proper cleanup:**
+**始终在 `onMounted` 中使用以便正确清理:**
 
 ```typescript
 onMounted(() => {
-  window.ipcRenderer.on('install-complete', (_event: IpcRendererEvent, result: DownloadResult) => {
-    // Handle event
-  });
+  window.ipcRenderer.on(
+    "install-complete",
+    (_event: IpcRendererEvent, result: DownloadResult) => {
+      // 处理事件
+    },
+  );
 
-  window.ipcRenderer.on('install-log', (_event: IpcRendererEvent, log: InstallLog) => {
-    // Handle log
-  });
+  window.ipcRenderer.on(
+    "install-log",
+    (_event: IpcRendererEvent, log: InstallLog) => {
+      // 处理日志
+    },
+  );
 });
 ```
 
 ---
 
-## 🔧 Main Process Patterns
+## 🔧 主进程模式
 
-### Spawning APM Commands
+### 生成 APM 命令
 
 ```typescript
-import { spawn } from 'node:child_process';
+import { spawn } from "node:child_process";
 
-// Check for privilege escalation
+// 检查权限提升
 const superUserCmd = await checkSuperUserCommand();
 const execCommand = superUserCmd.length > 0 ? superUserCmd : SHELL_CALLER_PATH;
-const execParams = superUserCmd.length > 0 
-  ? [SHELL_CALLER_PATH, 'apm', 'install', '-y', pkgname]
-  : ['apm', 'install', '-y', pkgname];
+const execParams =
+  superUserCmd.length > 0
+    ? [SHELL_CALLER_PATH, "apm", "install", "-y", pkgname]
+    : ["apm", "install", "-y", pkgname];
 
-// Spawn process
+// 生成进程
 const child = spawn(execCommand, execParams, {
   shell: true,
   env: process.env,
 });
 
-// Stream output
-child.stdout.on('data', (data) => {
-  webContents.send('install-log', { id, time: Date.now(), message: data.toString() });
+// 流式输出
+child.stdout.on("data", (data) => {
+  webContents.send("install-log", {
+    id,
+    time: Date.now(),
+    message: data.toString(),
+  });
 });
 
-// Handle completion
-child.on('close', (code) => {
+// 处理完成
+child.on("close", (code) => {
   const success = code === 0;
-  webContents.send('install-complete', { id, success, exitCode: code, /* ... */ });
+  webContents.send("install-complete", {
+    id,
+    success,
+    exitCode: code /* ... */,
+  });
 });
 ```
 
-### Parsing APM Output
+### 解析 APM 输出
 
-**APM outputs are text-based with specific formats:**
+**APM 输出是基于文本的特定格式:**
 
 ```typescript
-// Installed packages format: "pkgname/repo,version arch [flags]"
-// Example: "code/stable,1.108.2 amd64 [installed]"
+// 已安装包格式: "pkgname/repo,version arch [flags]"
+// 示例: "code/stable,1.108.2 amd64 [installed]"
 const parseInstalledList = (output: string) => {
   const apps: InstalledAppInfo[] = [];
-  const lines = output.split('\n');
+  const lines = output.split("\n");
   for (const line of lines) {
-    const match = line.trim().match(/^(\S+)\/\S+,\S+\s+(\S+)\s+(\S+)\s+\[(.+)\]$/);
+    const match = line
+      .trim()
+      .match(/^(\S+)\/\S+,\S+\s+(\S+)\s+(\S+)\s+\[(.+)\]$/);
     if (match) {
       apps.push({
         pkgname: match[1],
@@ -312,23 +339,23 @@ const parseInstalledList = (output: string) => {
 
 ---
 
-## 🌐 API Integration
+## 🌐 API 集成
 
-### Base Configuration
+### 基础配置
 
-```typescript
+````typescript
 // src/global/storeConfig.ts
 export const APM_STORE_BASE_URL = 'https://erotica.spark-app.store';
 
-// URL structure:
-// /{arch}/{category}/applist.json        - App list
-// /{arch}/{category}/{pkgname}/icon.png  - App icon
-// /{arch}/{category}/{pkgname}/screen_N.png - Screenshots (1-5)
-// /{arch}/categories.json                - Categories mapping
+// URL 结构:
+// /{arch}/{category}/applist.json        - 应用列表
+// /{arch}/{category}/{pkgname}/icon.png  - 应用图标
+// /{arch}/{category}/{pkgname}/screen_N.png - 截图 (1-5)
+// /{arch}/categories.json                - 分类映射
 
-### Home (主页) 页面数据
+### 首页 (主页) 数据
 
-The store may provide a special `home` directory under `{arch}` for a localized homepage. Two JSON files are expected:
+商店可能会在 `{arch}` 下提供一个特殊的 `home` 目录用于本地化首页。预期有两个 JSON 文件:
 
 - `homelinks.json` — 用于构建首页的轮播或链接块。每个条目示例:
 
@@ -340,49 +367,58 @@ The store may provide a special `home` directory under `{arch}` for a localized 
   "type": "_blank",
   "url": "https://bbs.spark-app.store/"
 }
-```
+````
 
-- `homelist.json` — 描述若干推荐应用列表，每项引用一个 JSON 列表（`jsonUrl`）: 
+- `homelist.json` — 描述若干推荐应用列表，每项引用一个 JSON 列表（`jsonUrl`）:
 
 ```json
 [
-  { "name":"装机必备", "type":"appList", "jsonUrl":"/home/lists/NecessaryforInstallation.json" }
+  {
+    "name": "装机必备",
+    "type": "appList",
+    "jsonUrl": "/home/lists/NecessaryforInstallation.json"
+  }
 ]
 ```
 
-Parsing rules used by the app:
-- Resolve `imgUrl` by prefixing: `${APM_STORE_BASE_URL}/{arch}${imgUrl}`.
+应用使用的解析规则:
+
+- 通过前缀解析 `imgUrl`: `${APM_STORE_BASE_URL}/{arch}${imgUrl}`。
 - `type: _blank` → 使用系统浏览器打开链接；`type: _self` → 在当前页面打开。
-- For `homelist.json` entries with `type: "appList"`, fetch the referenced `jsonUrl` and map each item to the app shape used by the UI:
+- 对于 `homelist.json` 中 `type: "appList"` 的条目，获取引用的 `jsonUrl` 并将每个项映射到 UI 使用的应用形状:
   - `Name` → `name`
   - `Pkgname` → `pkgname`
   - `Category` → `category`
   - `More` → `more`
 
-Where to implement:
-- Renderer: `src/App.vue` loads and normalizes `homelinks.json` and `homelist.json` on selecting the `home` category and exposes data to a new `HomeView` component.
-- Component: `src/components/HomeView.vue` renders link cards and recommended app sections (re-uses `AppCard.vue`).
+实现位置:
 
-Notes:
-- The `home` directory path is: `/{arch}/home/` under the configured `APM_STORE_BASE_URL`.
-- Missing or partially invalid files are handled gracefully — individual failures don't block showing other home sections.
-```
+- 渲染进程: `src/App.vue` 在选择 `home` 分类时加载并规范化 `homelinks.json` 和 `homelist.json`，并将数据暴露给新的 `HomeView` 组件。
+- 组件: `src/components/HomeView.vue` 渲染链接卡片和推荐应用部分（复用 `AppCard.vue`）。
 
-### Axios Usage
+注意事项:
+
+- `home` 目录路径是: 配置的 `APM_STORE_BASE_URL` 下的 `/{arch}/home/`。
+- 缺失或部分无效的文件会被优雅地处理 — 个别失败不会阻止显示其他首页部分。
+
+````
+
+### Axios 使用
 
 ```typescript
 const axiosInstance = axios.create({
   baseURL: APM_STORE_BASE_URL,
-  timeout: 1000,  // Note: Very short timeout!
+  timeout: 1000,  // 注意: 非常短的超时时间！
 });
 
-// Loading apps by category
+// 按分类加载应用
 const response = await axiosInstance.get<AppJson[]>(
   `/${window.apm_store.arch}/${category}/applist.json`
 );
-```
+````
 
-**Development Proxy (vite.config.ts):**
+**开发代理 (vite.config.ts):**
+
 ```typescript
 server: {
   proxy: {
@@ -397,373 +433,399 @@ server: {
 
 ---
 
-## 🎯 Deep Link Protocol (SPK URI Scheme)
+## 🎯 Deep Link 协议 (SPK URI Scheme)
 
 **URL Scheme:** `spk://`
 
-### Supported SPK URI Format
+### 支持的 SPK URI 格式
 
-Format: `spk://search/{pkgname}`
+格式: `spk://search/{pkgname}`
 
-**Examples:**
-- `spk://search/code` - Search for and open "code" app
-- `spk://search/steam` - Search for and open "steam" app  
-- `spk://search/store.spark-app.hmcl` - Search for and open "HMCL" game
+**示例:**
 
-### Implementation Pattern
+- `spk://search/code` - 搜索并打开 "code" 应用
+- `spk://search/steam` - 搜索并打开 "steam" 应用
+- `spk://search/store.spark-app.hmcl` - 搜索并打开 "HMCL" 游戏
+
+### 实现模式
 
 ```typescript
-// electron/main/deeplink.ts - Parse command line and route
+// electron/main/deeplink.ts - 解析命令行并路由
 export function handleCommandLine(commandLine: string[]) {
-  const deeplinkUrl = commandLine.find((arg) =>
-    arg.startsWith('spk://')
-  );
+  const deeplinkUrl = commandLine.find((arg) => arg.startsWith("spk://"));
   if (!deeplinkUrl) return;
 
   try {
     const url = new URL(deeplinkUrl);
     const action = url.hostname; // 'search'
 
-    if (action === 'search') {
-      // Format: spk://search/pkgname
-      // url.pathname will be '/pkgname'
-      const pkgname = url.pathname.split('/').filter(Boolean)[0];
+    if (action === "search") {
+      // 格式: spk://search/pkgname
+      // url.pathname 将是 '/pkgname'
+      const pkgname = url.pathname.split("/").filter(Boolean)[0];
       if (pkgname) {
-        listeners.emit('search', { pkgname });
+        listeners.emit("search", { pkgname });
       }
     }
   } catch (error) {
-    logger.error({ err: error }, 'Error parsing SPK URI');
+    logger.error({ err: error }, "Error parsing SPK URI");
   }
 }
 
-// src/App.vue - Handle in renderer
+// src/App.vue - 在渲染进程中处理
 window.ipcRenderer.on(
-  'deep-link-search',
+  "deep-link-search",
   (_event: IpcRendererEvent, data: { pkgname: string }) => {
-    // Trigger search with the pkgname
+    // 使用 pkgname 触发搜索
     searchQuery.value = data.pkgname;
-  }
+  },
 );
 ```
 
 ---
 
-## 🛡️ Security Considerations
+## 🛡️ 安全考虑
 
-### Privilege Escalation
+### 权限提升
 
-**Always check for `pkexec` availability:**
+**始终检查 `pkexec` 的可用性:**
 
 ```typescript
 const checkSuperUserCommand = async (): Promise<string> => {
   if (process.getuid && process.getuid() !== 0) {
-    const { stdout } = await execAsync('which /usr/bin/pkexec');
-    return stdout.trim().length > 0 ? '/usr/bin/pkexec' : '';
+    const { stdout } = await execAsync("which /usr/bin/pkexec");
+    return stdout.trim().length > 0 ? "/usr/bin/pkexec" : "";
   }
-  return '';
+  return "";
 };
 ```
 
-### Context Isolation
+### 上下文隔离
 
-**Current Status:** Context isolation is **enabled** (default Electron behavior).
+**当前状态:** 上下文隔离已 **启用** (Electron 默认行为)。
 
-**IPC Exposed via Preload (Safe):**
+**通过 Preload 安全地暴露 IPC:**
+
 ```typescript
 // electron/preload/index.ts
-contextBridge.exposeInMainWorld('ipcRenderer', {
+contextBridge.exposeInMainWorld("ipcRenderer", {
   on: (...args) => ipcRenderer.on(...args),
   send: (...args) => ipcRenderer.send(...args),
   invoke: (...args) => ipcRenderer.invoke(...args),
 });
 ```
 
-**⚠️ Do NOT enable nodeIntegration or disable contextIsolation!**
+**⚠️ 不要启用 nodeIntegration 或禁用 contextIsolation！**
 
 ---
 
-## 🎨 UI/UX Patterns
+## 🎨 UI/UX 模式
 
-### Tailwind CSS Usage
+### Tailwind CSS 使用
 
-**Dark Mode Support:**
+**暗色模式支持:**
+
 ```vue
 <div class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-  <!-- Content -->
+  <!-- 内容 -->
 </div>
 ```
 
-**Theme Toggle:**
+**主题切换:**
+
 ```typescript
 const isDarkTheme = ref(false);
 
 watch(isDarkTheme, (newVal) => {
-  localStorage.setItem('theme', newVal ? 'dark' : 'light');
-  document.documentElement.classList.toggle('dark', newVal);
+  localStorage.setItem("theme", newVal ? "dark" : "light");
+  document.documentElement.classList.toggle("dark", newVal);
 });
 ```
 
-### Modal Pattern
+### 模态框模式
 
 ```vue
 <template>
   <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center">
     <div class="absolute inset-0 bg-black/50" @click="closeModal"></div>
     <div class="modal-panel relative z-10 bg-white dark:bg-slate-900">
-      <!-- Modal content -->
+      <!-- 模态框内容 -->
     </div>
   </div>
 </template>
 ```
 
-### Loading States
+### 加载状态
 
 ```typescript
 const loading = ref(true);
 
-// In template
+// 在模板中
 <div v-if="loading">Loading...</div>
 <div v-else>{{ apps.length }} apps</div>
 ```
 
 ---
 
-## 🧪 Testing & Quality
+## 🧪 测试与质量
 
-### ESLint Configuration
+### ESLint 配置
 
 ```typescript
 // eslint.config.ts
 export default defineConfig([
-  globalIgnores(['**/3rdparty/**', '**/node_modules/**', '**/dist/**', '**/dist-electron/**']),
+  globalIgnores([
+    "**/3rdparty/**",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/dist-electron/**",
+  ]),
   tseslint.configs.recommended,
-  pluginVue.configs['flat/essential'],
+  pluginVue.configs["flat/essential"],
   eslintConfigPrettier,
   eslintPluginPrettierRecommended,
 ]);
 ```
 
-### TypeScript Configuration
+### TypeScript 配置
 
 ```json
 {
   "compilerOptions": {
-    "strict": true,           // Strict mode enabled
-    "noEmit": true,           // No emit (Vite handles build)
+    "strict": true, // 严格模式已启用
+    "noEmit": true, // 不输出 (Vite 处理构建)
     "module": "ESNext",
     "target": "ESNext",
-    "jsx": "preserve",        // Vue JSX
-    "resolveJsonModule": true // Import JSON files
+    "jsx": "preserve", // Vue JSX
+    "resolveJsonModule": true // 导入 JSON 文件
   }
 }
 ```
 
-### Code Quality Commands
+### 代码质量命令
 
 ```bash
-npm run lint         # Run ESLint
-npm run lint:fix     # Auto-fix issues
-npm run format       # Format with Prettier
+npm run lint         # 运行 ESLint
+npm run lint:fix     # 自动修复问题
+npm run format       # 使用 Prettier 格式化
 ```
 
 ---
 
-## 🚀 Build & Development
+## 🚀 构建与开发
 
-### Development Mode
-
-```bash
-npm run dev          # Start dev server (Vite + Electron)
-```
-
-**Dev Server:** `http://127.0.0.1:3344/` (port from package.json)
-
-### Production Build
+### 开发模式
 
 ```bash
-npm run build        # Build all (deb + rpm)
-npm run build:deb    # Build Debian package only
-npm run build:rpm    # Build RPM package only
+npm run dev          # 启动开发服务器 (Vite + Electron)
 ```
 
-**Build Output:**
-- `dist-electron/` - Compiled Electron code
-- `dist/` - Compiled renderer assets
-- Packaged app in project root
+**开发服务器:** `http://127.0.0.1:3344/` (来自 package.json)
 
-### Build Configuration
+### 生产构建
+
+```bash
+npm run build        # 构建所有 (deb + rpm)
+npm run build:deb    # 仅构建 Debian 包
+npm run build:rpm    # 仅构建 RPM 包
+```
+
+**构建输出:**
+
+- `dist-electron/` - 编译的 Electron 代码
+- `dist/` - 编译的渲染器资源
+- 打包的应用在项目根目录
+
+### 构建配置
 
 **electron-builder.yml:**
+
 - App ID: `cn.eu.org.simplelinux.apmstore`
-- Linux targets: deb, rpm
-- Includes extras/ directory in resources
-- Auto-update disabled (Linux package manager handles updates)
+- Linux 目标: deb, rpm
+- 包含 extras/ 目录在资源中
+- 自动更新禁用 (Linux 包管理器处理更新)
 
 ---
 
-## 📦 Important Files to Understand
+## 📦 重要文件说明
 
 ### 1. electron/main/backend/install-manager.ts
-**Purpose:** Core package management logic  
-**Key Responsibilities:**
-- Task queue management
-- APM command spawning
-- Progress reporting
-- Installed/upgradable list parsing
 
-**Critical Functions:**
-- `processNextInQueue()` - Task processor
-- `parseInstalledList()` - Parse APM output
-- `checkSuperUserCommand()` - Privilege escalation
+**用途:** 核心包管理逻辑
+**主要职责:**
+
+- 任务队列管理
+- APM 命令生成
+- 进度报告
+- 已安装/可升级列表解析
+
+**关键函数:**
+
+- `processNextInQueue()` - 任务处理器
+- `parseInstalledList()` - 解析 APM 输出
+- `checkSuperUserCommand()` - 权限提升
 
 ### 2. src/App.vue
-**Purpose:** Root component  
-**Key Responsibilities:**
-- App state management
-- Category/app loading
-- Modal orchestration
-- Deep link handling
+
+**用途:** 根组件
+**主要职责:**
+
+- 应用状态管理
+- 分类/应用加载
+- 模态框协调
+- Deep Link 处理
 
 ### 3. src/global/downloadStatus.ts
-**Purpose:** Download queue state  
-**Key Features:**
-- Reactive download list
-- Download item CRUD operations
-- Change watchers for UI updates
+
+**用途:** 下载队列状态
+**关键特性:**
+
+- 响应式下载列表
+- 下载项 CRUD 操作
+- UI 更新的变化监听器
 
 ### 4. electron/preload/index.ts
-**Purpose:** Renderer-Main bridge  
-**Key Features:**
-- IPC API exposure
-- Architecture detection
-- Loading animation
+
+**用途:** 渲染进程-主进程桥梁
+**关键特性:**
+
+- IPC API 暴露
+- 架构检测
+- 加载动画
 
 ### 5. vite.config.ts
-**Purpose:** Build configuration  
-**Key Features:**
-- Electron plugin setup
-- Dev server proxy
-- Tailwind integration
+
+**用途:** 构建配置
+**关键特性:**
+
+- Electron 插件设置
+- 开发服务器代理
+- Tailwind 集成
 
 ---
 
-## 🐛 Common Pitfalls & Solutions
+## 🐛 常见陷阱与解决方案
 
-### 1. Duplicate Task Handling
+### 1. 重复任务处理
 
-**Problem:** User clicks install multiple times  
-**Solution:**
+**问题:** 用户多次点击安装
+**解决方案:**
+
 ```typescript
 if (tasks.has(id) && !download.retry) {
-  logger.warn('Task already exists, ignoring duplicate');
+  logger.warn("Task already exists, ignoring duplicate");
   return;
 }
 ```
 
-### 2. Window Close Behavior
+### 2. 窗口关闭行为
 
-**Problem:** Closing window while tasks are running  
-**Solution:**
+**问题:** 任务运行时关闭窗口
+**解决方案:**
+
 ```typescript
-win.on('close', (event) => {
+win.on("close", (event) => {
   event.preventDefault();
   if (tasks.size > 0) {
-    win.hide();          // Hide instead of closing
+    win.hide(); // 隐藏而不是关闭
     win.setSkipTaskbar(true);
   } else {
-    win.destroy();       // Allow close if no tasks
+    win.destroy(); // 没有任务时允许关闭
   }
 });
 ```
 
-### 3. App Data Normalization
+### 3. 应用数据规范化
 
-**Problem:** API returns PascalCase, app uses camelCase  
-**Solution:**
+**问题:** API 返回 PascalCase，应用使用 camelCase
+**解决方案:**
+
 ```typescript
 const normalizedApp: App = {
   name: appJson.Name,
   pkgname: appJson.Pkgname,
   version: appJson.Version,
-  // ... map all fields
+  // ... 映射所有字段
 };
 ```
 
-### 4. Screenshot Loading
+### 4. 截图加载
 
-**Problem:** Not all apps have 5 screenshots  
-**Solution:**
+**问题:** 并非所有应用都有 5 张截图
+**解决方案:**
+
 ```typescript
 for (let i = 1; i <= 5; i++) {
   const img = new Image();
   img.src = screenshotUrl;
   img.onload = () => screenshots.value.push(screenshotUrl);
-  // No onerror handler - silently skip missing images
+  // 没有 onerror 处理器 - 静默跳过缺失的图片
 }
 ```
 
 ---
 
-## 📚 Logging Best Practices
+## 📚 日志最佳实践
 
-### Pino Logger Usage
+### Pino Logger 使用
 
 ```typescript
-import pino from 'pino';
-const logger = pino({ name: 'module-name' });
+import pino from "pino";
+const logger = pino({ name: "module-name" });
 
-// Levels: trace, debug, info, warn, error, fatal
-logger.info('Application started');
-logger.error({ err }, 'Failed to load apps');
+// 级别: trace, debug, info, warn, error, fatal
+logger.info("Application started");
+logger.error({ err }, "Failed to load apps");
 logger.warn(`Package ${pkgname} not found`);
 ```
 
-### Log Locations
+### 日志位置
 
-**Development:** Console with `pino-pretty`  
-**Production:** Structured JSON to stdout
+**开发:** 控制台使用 `pino-pretty`
+**生产:** 结构化 JSON 到 stdout
 
 ---
 
-## 🔄 State Management
+## 🔄 状态管理
 
-### Global State (src/global/storeConfig.ts)
+### 全局状态 (src/global/storeConfig.ts)
 
 ```typescript
 export const currentApp = ref<App | null>(null);
 export const currentAppIsInstalled = ref(false);
 ```
 
-**Usage Pattern:**
-```typescript
-import { currentApp, currentAppIsInstalled } from '@/global/storeConfig';
+**使用模式:**
 
-// Set current app
+```typescript
+import { currentApp, currentAppIsInstalled } from "@/global/storeConfig";
+
+// 设置当前应用
 currentApp.value = selectedApp;
 
-// Check installation status
-window.ipcRenderer.invoke('check-installed', app.pkgname)
+// 检查安装状态
+window.ipcRenderer
+  .invoke("check-installed", app.pkgname)
   .then((isInstalled: boolean) => {
     currentAppIsInstalled.value = isInstalled;
   });
 ```
 
-### Download Queue (src/global/downloadStatus.ts)
+### 下载队列 (src/global/downloadStatus.ts)
 
 ```typescript
 export const downloads = ref<DownloadItem[]>([]);
 
-// Add download
+// 添加下载
 downloads.value.push(newDownload);
 
-// Remove download
+// 移除下载
 export const removeDownloadItem = (pkgname: string) => {
-  const index = downloads.value.findIndex(d => d.pkgname === pkgname);
+  const index = downloads.value.findIndex((d) => d.pkgname === pkgname);
   if (index !== -1) downloads.value.splice(index, 1);
 };
 
-// Watch changes
+// 监听变化
 export const watchDownloadsChange = (callback: () => void) => {
   watch(downloads, callback, { deep: true });
 };
@@ -771,124 +833,130 @@ export const watchDownloadsChange = (callback: () => void) => {
 
 ---
 
-## 🎯 Contribution Guidelines
+## 🎯 贡献指南
 
-### When Adding New Features
+### 添加新功能时
 
-1. **Add TypeScript types first** (src/global/typedefinition.ts)
-2. **Update IPC handlers** if main-renderer communication needed
-3. **Follow existing component patterns** (props, emits, setup)
-4. **Test with actual APM commands** (don't mock in development)
-5. **Update README TODO list** when completing tasks
+1. **首先添加 TypeScript 类型** (src/global/typedefinition.ts)
+2. **更新 IPC 处理器** (如果需要主进程-渲染进程通信)
+3. **遵循现有组件模式** (props, emits, setup)
+4. **使用实际的 APM 命令测试** (不要在开发中使用 mock)
+5. **完成任务时更新 README TODO 列表**
 
-### Code Style
+### 代码风格
 
-- **Use TypeScript strict mode** - no `any` types without `eslint-disable`
-- **Avoid used of eslint-disable directly** - use `undefined` instead if you really do not know its type.
-- **Prefer Composition API** - `<script setup lang="ts">`
-- **Use arrow functions** for methods in setup
-- **Destructure imports** - `import { ref } from 'vue'`
-- **Follow naming conventions:**
-  - Components: PascalCase (AppCard.vue)
-  - Functions: camelCase (handleInstall)
-  - Constants: UPPER_SNAKE_CASE (SHELL_CALLER_PATH)
+- **使用 TypeScript 严格模式** - 没有 `any` 类型，除非使用 `eslint-disable`
+- **避免直接使用 eslint-disable** - 如果你真的不知道类型，使用 `undefined` 代替
+- **优先使用 Composition API** - `<script setup lang="ts">`
+- **在 setup 中使用箭头函数** 作为方法
+- **解构导入** - `import { ref } from 'vue'`
+- **遵循命名约定:**
+  - 组件: PascalCase (AppCard.vue)
+  - 函数: camelCase (handleInstall)
+  - 常量: UPPER_SNAKE_CASE (SHELL_CALLER_PATH)
 
-### Commit Message Format
+### 提交信息格式
 
 ```
 type(scope): subject
 
-Examples:
+示例:
 feat(install): add retry mechanism for failed installations
 fix(ui): correct dark mode toggle persistence
 refactor(ipc): simplify install manager event handling
 docs(readme): update build instructions
 ```
-Add sign off to the commit is recommended.
+
+建议添加签名到提交。
+
 ---
 
-## 🔗 Related Resources
+## 🔗 相关资源
 
-- **APM Project:** https://gitee.com/spark-store-project/AmberPM
-- **Electron Docs:** https://www.electronjs.org/docs
-- **Vue 3 Docs:** https://vuejs.org/
-- **Vite Docs:** https://vitejs.dev/
+- **APM 项目:** https://gitee.com/spark-store-project/AmberPM
+- **Electron 文档:** https://www.electronjs.org/docs
+- **Vue 3 文档:** https://vuejs.org/
+- **Vite 文档:** https://vitejs.dev/
 - **Tailwind CSS:** https://tailwindcss.com/
 
 ---
 
-## ⚠️ Known Issues & TODOs
+## ⚠️ 已知问题和 TODO
 
-See README.md for more details.
+详见 README.md。
 
-## 🎓 Learning Path for New Contributors
+## 🎓 新贡献者学习路径
 
-### Phase 1: Understand the Stack
-1. Read Vue 3 Composition API docs
-2. Review Electron IPC communication patterns
-3. Understand APM package manager basics
+### 阶段 1: 理解技术栈
 
-### Phase 2: Explore the Code
-1. Start with `src/App.vue` - see how app state flows
-2. Study `electron/main/backend/install-manager.ts` - understand task queue
-3. Review `src/global/typedefinition.ts` - learn data structures
+1. 阅读 Vue 3 Composition API 文档
+2. 查看 Electron IPC 通信模式
+3. 理解 APM 包管理器基础
 
-### Phase 3: Make Your First Change
-1. Pick an item from TODO list (prefer UI improvements first)
-2. Create a feature branch
-3. Follow code style guidelines
-4. Test with actual APM commands
-5. Submit PR with clear description
+### 阶段 2: 探索代码
 
----
+1. 从 `src/App.vue` 开始 - 查看应用状态如何流动
+2. 学习 `electron/main/backend/install-manager.ts` - 理解任务队列
+3. 查看 `src/global/typedefinition.ts` - 学习数据结构
 
-## 🤖 AI Agent-Specific Instructions
+### 阶段 3: 做第一次修改
 
-### When Generating Code
-
-1. **Always check existing patterns first** - search for similar implementations
-2. **Maintain type safety** - no implicit any, use explicit types
-3. **Follow IPC naming conventions:**
-   - Main → Renderer: `kebab-case` (e.g., `install-complete`)
-   - Handlers: descriptive names (e.g., `queue-install`, `list-installed`)
-4. **Error handling:**
-   - Always catch promises
-   - Log errors with context
-   - Send user-friendly messages to renderer
-5. **State updates:**
-   - Use Vue reactivity (ref, reactive)
-   - Avoid direct array mutations, use spread operator
-   - Update UI before async operations complete
-
-### When Fixing Bugs
-
-1. **Reproduce first** - understand the context
-2. **Check IPC communication** - many bugs are timing issues
-3. **Verify APM output parsing** - format may change
-4. **Test edge cases:**
-   - Missing packages
-   - Network failures
-   - Privilege escalation failures
-   - Rapid button clicks
-
-### When Refactoring
-
-1. **Don't break IPC contracts** - keep event names and payloads compatible
-2. **Preserve type safety** - update types before code
-3. **Test installation flow end-to-end**
-4. **Update comments and docs**
-
-### MUST DO
-
-1. Lint code 
-2. Format code
-3. Build vite project to check for errors.
----
-
-**Document Version:** 1.0  
-**Last Updated:** 2026-02-14  
-**Generated for:** AI Coding Agents working on elysia-best/apm-app-store
+1. 从 TODO 列表中选择一项 (优先 UI 改进)
+2. 创建功能分支
+3. 遵循代码风格指南
+4. 使用实际的 APM 命令测试
+5. 提交清晰的 PR 描述
 
 ---
 
-This document should be updated as the codebase evolves. When in doubt, refer to the actual source code and prioritize type safety and user experience.
+## 🤖 AI Agent 特定指令
+
+### 生成代码时
+
+1. **始终先检查现有模式** - 搜索类似的实现
+2. **保持类型安全** - 没有隐式 any，使用显式类型
+3. **遵循 IPC 命名约定:**
+   - 主进程 → 渲染进程: `kebab-case` (例如: `install-complete`)
+   - 处理器: 描述性名称 (例如: `queue-install`, `list-installed`)
+4. **错误处理:**
+   - 始终捕获 promises
+   - 记录带有上下文的错误
+   - 发送用户友好的消息到渲染进程
+5. **状态更新:**
+   - 使用 Vue 响应式 (ref, reactive)
+   - 避免直接数组变异，使用展开运算符
+   - 在异步操作完成前更新 UI
+
+### 修复 Bug 时
+
+1. **首先复现** - 理解上下文
+2. **检查 IPC 通信** - 许多 Bug 是时序问题
+3. **验证 APM 输出解析** - 格式可能会改变
+4. **测试边界情况:**
+   - 缺失的包
+   - 网络失败
+   - 权限提升失败
+   - 快速按钮点击
+
+### 重构时
+
+1. **不要破坏 IPC 契约** - 保持事件名称和负载兼容
+2. **保持类型安全** - 在代码之前更新类型
+3. **端到端测试安装流程**
+4. **更新注释和文档**
+
+### 必须执行
+
+1. Lint 代码
+2. 格式化代码
+3. 构建 vite 项目以检查错误
+
+---
+
+**文档版本:** 1.0
+**最后更新:** 2026-03-10
+**生成对象:** 在 elysia-best/apm-app-store 工作的 AI 编码代理
+
+---
+
+本文档应随着代码库的演变而更新。如有疑问，请参考实际源代码，并优先考虑类型安全和用户体验。

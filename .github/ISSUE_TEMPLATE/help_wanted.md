@@ -1,10 +1,23 @@
 ---
-name: 🥺 Help wanted
-about: Confuse about the use of electron-vue-vite
-title: "[Help] the title of help wanted report"
-labels: help wanted
-assignees: ''
-
+name: 功能请求 / 帮助请求
+about: 为这个项目建议一个新想法
+title: "[Feature] "
+labels: enhancement
+assignees: ""
 ---
 
-#### Describe the problem you confuse
+## 你的功能请求是否与问题有关？
+
+清晰简洁地描述问题。例如：我在 [...] 时总是感到沮丧
+
+## 你想要的解决方案是什么？
+
+清晰简洁地描述你想要发生什么。
+
+## 你考虑过哪些替代方案？
+
+清晰简洁地描述你考虑过的任何替代解决方案或功能。
+
+## 额外上下文
+
+添加任何其他关于功能请求的上下文或截图。

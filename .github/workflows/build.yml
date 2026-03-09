@@ -15,6 +15,7 @@ on:
       - ".gitignore"
       - ".github/**"
       - "!.github/workflows/build.yml"
+      - "!.github/workflows/test.yml"
   pull_request:
     branches: [main]
     paths-ignore:
@@ -32,7 +33,28 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Run lint
+        run: npm run lint
+
   build:
+    needs: test
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.docker_image }}
 
@@ -46,7 +68,6 @@ jobs:
             docker_image: "debian:12"
           - package: rpm
             docker_image: "almalinux:8"
-      
 
     steps:
       - name: Install Build Dependencies
@@ -71,7 +92,7 @@ jobs:
           node-version: 20
 
       - name: Install Dependencies
-        run: | 
+        run: |
           npm install
 
       - name: Download host-spawn
