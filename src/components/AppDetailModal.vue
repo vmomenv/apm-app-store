@@ -21,12 +21,15 @@
             <div
               class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-b from-slate-100 to-slate-200 shadow-inner dark:from-slate-800 dark:to-slate-700"
             >
-              <img
-                v-if="app"
-                :src="iconPath"
-                alt="icon"
-                class="h-full w-full object-cover"
-              />
+                <img
+                  v-if="app"
+                  :src="iconPath"
+                  alt="icon"
+                  class="h-full w-full object-cover transition-opacity duration-300"
+                  :class="isIconLoaded ? 'opacity-100' : 'opacity-0'"
+                  loading="lazy"
+                  @load="isIconLoaded = true"
+                />
             </div>
             <div class="space-y-1">
               <div class="flex items-center gap-3">
@@ -108,7 +111,8 @@
             :key="index"
             :src="screen"
             alt="screenshot"
-            class="h-40 w-full cursor-pointer rounded-2xl border border-slate-200/60 object-cover shadow-sm transition hover:-translate-y-1 hover:shadow-lg dark:border-slate-800/60"
+            class="h-40 w-full cursor-pointer rounded-2xl border border-slate-200/60 object-cover shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-slate-800/60"
+            loading="lazy"
             @click="openPreview(index)"
             @error="hideImage"
           />
@@ -229,6 +233,15 @@ const emit = defineEmits<{
 
 const appPkgname = computed(() => props.app?.pkgname);
 
+const isIconLoaded = ref(false);
+
+watch(
+  () => props.app,
+  () => {
+    isIconLoaded.value = false;
+  },
+);
+
 const activeDownload = computed(() => {
   return downloads.value.find((d) => d.pkgname === props.app?.pkgname);
 });
@@ -236,8 +249,10 @@ const activeDownload = computed(() => {
 const { installFeedback } = useInstallFeedback(appPkgname);
 const { isCompleted } = useDownloadItemStatus(appPkgname);
 const installBtnText = computed(() => {
+  if (props.isinstalled) {
+    return "已安装";
+  }
   if (isCompleted.value) {
-    // TODO: 似乎有一个时间差，安装好了之后并不是立马就可以从已安装列表看见
     return "已安装";
   }
   if (installFeedback.value) {

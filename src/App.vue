@@ -179,6 +179,24 @@ const axiosInstance = axios.create({
   baseURL: APM_STORE_BASE_URL,
   timeout: 5000, // 增加到 5 秒，避免网络波动导致的超时
 });
+
+const fetchWithRetry = async <T>(
+  url: string,
+  retries = 3,
+  delay = 1000,
+): Promise<T> => {
+  try {
+    const response = await axiosInstance.get<T>(url);
+    return response.data;
+  } catch (error) {
+    if (retries > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return fetchWithRetry(url, retries - 1, delay * 2);
+    }
+    throw error;
+  }
+};
+
 const cacheBuster = (url: string) => `${url}?cb=${Date.now()}`;
 
 // 响应式状态
@@ -331,11 +349,7 @@ const loadScreenshots = (app: App) => {
   screenshots.value = [];
   for (let i = 1; i <= 5; i++) {
     const screenshotUrl = `${APM_STORE_BASE_URL}/${window.apm_store.arch}/${app.category}/${app.pkgname}/screen_${i}.png`;
-    const img = new Image();
-    img.src = screenshotUrl;
-    img.onload = () => {
-      screenshots.value.push(screenshotUrl);
-    };
+    screenshots.value.push(screenshotUrl);
   }
 };
 
@@ -389,13 +403,38 @@ const loadHome = async () => {
               const r = await fetch(url);
               if (r.ok) {
                 const appsJson = await r.json();
-                const apps = (appsJson || []).map((a: any) => ({
-                  name: a.Name || a.name || a.Pkgname || a.PkgName || "",
-                  pkgname: a.Pkgname || a.pkgname || "",
-                  category: a.Category || a.category || "unknown",
-                  more: a.More || a.more || "",
-                  version: a.Version || "",
-                }));
+                const rawApps = appsJson || [];
+                const apps = await Promise.all(
+                  rawApps.map(async (a: any) => {
+                    const baseApp = {
+                      name: a.Name || a.name || a.Pkgname || a.PkgName || "",
+                      pkgname: a.Pkgname || a.pkgname || "",
+                      category: a.Category || a.category || "unknown",
+                      more: a.More || a.more || "",
+                      version: a.Version || "",
+                      filename: a.Filename || a.filename || "",
+                    };
+
+                    // 根据官网的要求，读取Category和Pkgname，拼接出 源地址/架构/Category/Pkgname/app.json来获取对应的真实json
+                    try {
+                      const realAppUrl = `${APM_STORE_BASE_URL}/${window.apm_store.arch}/${baseApp.category}/${baseApp.pkgname}/app.json`;
+                      const realRes = await fetch(realAppUrl);
+                      if (realRes.ok) {
+                        const realApp = await realRes.json();
+                        // 用真实json的filename字段和More字段来增补和覆盖当前的json
+                        if (realApp.Filename) baseApp.filename = realApp.Filename;
+                        if (realApp.More) baseApp.more = realApp.More;
+                        if (realApp.Name) baseApp.name = realApp.Name;
+                      }
+                    } catch (e) {
+                      console.warn(
+                        `Failed to fetch real app.json for ${baseApp.pkgname}`,
+                        e,
+                      );
+                    }
+                    return baseApp;
+                  }),
+                );
                 homeLists.value.push({ title: item.name || "推荐", apps });
               }
             } catch (e) {
@@ -633,8 +672,8 @@ const onUninstallSuccess = () => {
   }
 };
 
-const installCompleteCallback = () => {
-  if (currentApp.value) {
+const installCompleteCallback = (pkgname?: string) => {
+  if (currentApp.value && (!pkgname || currentApp.value.pkgname === pkgname)) {
     checkAppInstalled(currentApp.value);
   }
 };
@@ -739,56 +778,62 @@ const loadCategories = async () => {
 
 const loadApps = async (onFirstBatch?: () => void) => {
   try {
-    logger.info("开始加载应用数据（并发分批）...");
+    logger.info("开始加载应用数据（全并发带重试）...");
 
     const categoriesList = Object.keys(categories.value || {});
-    const concurrency = 4; // 同时并发请求数量，可根据网络条件调整
+    let firstBatchCallDone = false;
 
-    for (let i = 0; i < categoriesList.length; i += concurrency) {
-      const batch = categoriesList.slice(i, i + concurrency);
-      await Promise.all(
-        batch.map(async (category) => {
-          try {
-            logger.info(`加载分类: ${category}`);
-            const response = await axiosInstance.get<AppJson[]>(
-              cacheBuster(`/${window.apm_store.arch}/${category}/applist.json`),
-            );
-            const categoryApps = response.status === 200 ? response.data : [];
-            categoryApps.forEach((appJson) => {
-              const normalizedApp: App = {
-                name: appJson.Name,
-                pkgname: appJson.Pkgname,
-                version: appJson.Version,
-                filename: appJson.Filename,
-                torrent_address: appJson.Torrent_address,
-                author: appJson.Author,
-                contributor: appJson.Contributor,
-                website: appJson.Website,
-                update: appJson.Update,
-                size: appJson.Size,
-                more: appJson.More,
-                tags: appJson.Tags,
-                img_urls:
-                  typeof appJson.img_urls === "string"
-                    ? JSON.parse(appJson.img_urls)
-                    : appJson.img_urls,
-                icons: appJson.icons,
-                category: category,
-                currentStatus: "not-installed",
-              };
-              apps.value.push(normalizedApp);
-            });
-          } catch (error) {
-            logger.warn(`加载分类 ${category} 失败: ${error}`);
+    // 并发加载所有分类，每个分类自带重试机制
+    await Promise.all(
+      categoriesList.map(async (category) => {
+        try {
+          logger.info(`加载分类: ${category}`);
+          const categoryApps = await fetchWithRetry<AppJson[]>(
+            cacheBuster(`/${window.apm_store.arch}/${category}/applist.json`),
+          );
+
+          const normalizedApps = (categoryApps || []).map((appJson) => ({
+            name: appJson.Name,
+            pkgname: appJson.Pkgname,
+            version: appJson.Version,
+            filename: appJson.Filename,
+            torrent_address: appJson.Torrent_address,
+            author: appJson.Author,
+            contributor: appJson.Contributor,
+            website: appJson.Website,
+            update: appJson.Update,
+            size: appJson.Size,
+            more: appJson.More,
+            tags: appJson.Tags,
+            img_urls:
+              typeof appJson.img_urls === "string"
+                ? JSON.parse(appJson.img_urls)
+                : appJson.img_urls,
+            icons: appJson.icons,
+            category: category,
+            currentStatus: "not-installed" as const,
+          }));
+
+          // 增量式更新，让用户尽快看到部分数据
+          apps.value.push(...normalizedApps);
+
+          // 只要有一个分类加载成功，就可以考虑关闭整体 loading（如果是首批逻辑）
+          if (!firstBatchCallDone && typeof onFirstBatch === "function") {
+            firstBatchCallDone = true;
+            onFirstBatch();
           }
-        }),
-      );
+        } catch (error) {
+          logger.warn(`加载分类 ${category} 最终失败: ${error}`);
+        }
+      }),
+    );
 
-      // 首批完成回调（用于隐藏首屏 loading）
-      if (i === 0 && typeof onFirstBatch === "function") onFirstBatch();
+    // 确保即使全部失败也结束 loading
+    if (!firstBatchCallDone && typeof onFirstBatch === "function") {
+      onFirstBatch();
     }
   } catch (error) {
-    logger.error(`加载应用数据失败: ${error}`);
+    logger.error(`加载应用数据流程异常: ${error}`);
   }
 };
 
@@ -805,14 +850,18 @@ onMounted(async () => {
   initTheme();
 
   await loadCategories();
-  // 默认加载主页数据
-  await loadHome();
-  // 先显示 loading，并异步开始分批加载应用列表。
+
+  // 分类目录加载后，并行加载主页数据和所有应用列表
   loading.value = true;
-  loadApps(() => {
-    // 当第一批分类加载完成后，隐藏首屏 loading
-    loading.value = false;
-  });
+  await Promise.all([
+    loadHome(),
+    new Promise<void>((resolve) => {
+      loadApps(() => {
+        loading.value = false;
+        resolve();
+      });
+    }),
+  ]);
 
   // 设置键盘导航
   document.addEventListener("keydown", (e) => {

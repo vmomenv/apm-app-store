@@ -12,7 +12,11 @@
           class="flex flex-col items-start gap-2 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm hover:shadow-lg transition"
           :title="link.more"
         >
-          <img :src="computedImgUrl(link.imgUrl)" class="h-20 w-full object-contain" />
+          <img
+            :src="computedImgUrl(link.imgUrl)"
+            class="h-20 w-full object-contain"
+            loading="lazy"
+          />
           <div class="text-base font-semibold text-slate-900">{{ link.name }}</div>
           <div class="text-sm text-slate-500">{{ link.more }}</div>
         </a>
