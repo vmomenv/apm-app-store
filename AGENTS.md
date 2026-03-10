@@ -285,7 +285,7 @@ const execParams =
 
 // 生成进程
 const child = spawn(execCommand, execParams, {
-  shell: true,
+  shell: false,
   env: process.env,
 });
 

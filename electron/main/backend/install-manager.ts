@@ -52,7 +52,7 @@ const runCommandCapture = async (execCommand: string, execParams: string[]) => {
   return await new Promise<{ code: number; stdout: string; stderr: string }>(
     (resolve) => {
       const child = spawn(execCommand, execParams, {
-        shell: true,
+        shell: false,
         env: process.env,
       });
 
@@ -340,7 +340,7 @@ async function processNextInQueue() {
       stderr: string;
     }>((resolve, reject) => {
       const child = spawn(task.execCommand, task.execParams, {
-        shell: true,
+        shell: false,
         env: process.env,
       });
       task.install_process = child;
@@ -484,7 +484,7 @@ ipcMain.on("remove-installed", async (_event, pkgname: string) => {
     execCommand,
     [...execParams, "aptss", "remove", pkgname],
     {
-      shell: true,
+      shell: false,
       env: process.env,
     },
   );
