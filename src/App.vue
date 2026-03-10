@@ -318,17 +318,47 @@ const selectCategory = (category: string) => {
   }
 };
 
-const openDetail = (app: App) => {
-  currentApp.value = app;
+const openDetail = (app: App | Record<string, unknown>) => {
+  // 提取 pkgname（必须存在）
+  const pkgname = (app as any).pkgname;
+  if (!pkgname) {
+    console.warn('openDetail: 缺少 pkgname', app);
+    return;
+  }
+
+  // 尝试从全局 apps 中查找完整 App
+  let fullApp = apps.value.find(a => a.pkgname === pkgname);
+  if (!fullApp) {
+    // 构造一个最小可用的 App 对象
+    fullApp = {
+      name: (app as any).name || '',
+      pkgname: pkgname,
+      version: (app as any).version || '',
+      filename: (app as any).filename || '',
+      category: (app as any).category || 'unknown',
+      torrent_address: '',
+      author: '',
+      contributor: '',
+      website: '',
+      update: '',
+      size: '',
+      more: (app as any).more || '',
+      tags: '',
+      img_urls: [],
+      icons: '',
+      currentStatus: 'not-installed',
+    };
+  }
+
+  // 后续逻辑使用 fullApp
+  currentApp.value = fullApp;
   currentScreenIndex.value = 0;
-  loadScreenshots(app);
+  loadScreenshots(fullApp);
   showModal.value = true;
 
-  // 检测本地是否已经安装了该应用
   currentAppIsInstalled.value = false;
-  checkAppInstalled(app);
+  checkAppInstalled(fullApp);
 
-  // 确保模态框显示后滚动到顶部
   nextTick(() => {
     const modal = document.querySelector(
       '[data-app-modal="detail"] .modal-panel',
