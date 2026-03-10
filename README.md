@@ -1,10 +1,10 @@
-# APM 应用商店
+# 星火应用商店
 
 <div align="center">
 
-<img src="icons/amber-pm-logo.png" alt="APM Logo" width="200" height="200" />
+<img src="icons/spark-store.svg" alt="APM Logo" width="200" height="200" />
 
-**星火 APM 琥珀软件包管理器 - 桌面应用商店**
+**星火应用商店**
 
 基于 Electron + Vue 3 + Vite 构建的现代化应用商店客户端
 
