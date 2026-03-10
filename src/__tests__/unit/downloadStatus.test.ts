@@ -7,25 +7,27 @@ describe("downloadStatus", () => {
     downloads.value = [];
   });
 
+  const createMockDownload = (id: number, pkgname: string): DownloadItem => ({
+    id,
+    name: `Test App ${id}`,
+    pkgname,
+    version: "1.0.0",
+    icon: "",
+    status: "queued",
+    progress: 0,
+    downloadedSize: 0,
+    totalSize: 1000000,
+    speed: 0,
+    timeRemaining: 0,
+    startTime: Date.now(),
+    logs: [],
+    source: "Test",
+    retry: false,
+  });
+
   describe("addDownload", () => {
     it("should add a new download item", () => {
-      const mockDownload: DownloadItem = {
-        id: 1,
-        name: "Test App",
-        pkgname: "test-app",
-        version: "1.0.0",
-        icon: "",
-        status: "queued",
-        progress: 0,
-        downloadedSize: 0,
-        totalSize: 1000000,
-        speed: 0,
-        timeRemaining: 0,
-        startTime: Date.now(),
-        logs: [],
-        source: "Test",
-        retry: false,
-      };
+      const mockDownload = createMockDownload(1, "test-app");
 
       downloads.value.push(mockDownload);
 
@@ -36,28 +38,64 @@ describe("downloadStatus", () => {
 
   describe("removeDownloadItem", () => {
     it("should remove download by pkgname", () => {
-      const mockDownload: DownloadItem = {
-        id: 1,
-        name: "Test App",
-        pkgname: "test-app",
-        version: "1.0.0",
-        icon: "",
-        status: "queued",
-        progress: 0,
-        downloadedSize: 0,
-        totalSize: 1000000,
-        speed: 0,
-        timeRemaining: 0,
-        startTime: Date.now(),
-        logs: [],
-        source: "Test",
-        retry: false,
-      };
-
-      downloads.value.push(mockDownload);
+      downloads.value.push(createMockDownload(1, "test-app"));
       removeDownloadItem("test-app");
 
       expect(downloads.value).toHaveLength(0);
+    });
+
+    it("should remove all items with matching pkgname when multiple exist", () => {
+      downloads.value.push(createMockDownload(1, "test-app"));
+      downloads.value.push(createMockDownload(2, "other-app"));
+      downloads.value.push(createMockDownload(3, "test-app"));
+
+      removeDownloadItem("test-app");
+
+      expect(downloads.value).toHaveLength(1);
+      expect(downloads.value[0].pkgname).toBe("other-app");
+    });
+
+    it("should not remove items that do not match the pkgname", () => {
+      downloads.value.push(createMockDownload(1, "app-1"));
+      downloads.value.push(createMockDownload(2, "app-2"));
+
+      removeDownloadItem("non-existent");
+
+      expect(downloads.value).toHaveLength(2);
+      expect(downloads.value.map((d) => d.pkgname)).toEqual(["app-1", "app-2"]);
+    });
+
+    it("should handle removing from an empty list", () => {
+      expect(() => removeDownloadItem("test-app")).not.toThrow();
+      expect(downloads.value).toHaveLength(0);
+    });
+
+    it("should only remove items with the exact pkgname match", () => {
+      downloads.value.push(createMockDownload(1, "test-app"));
+      downloads.value.push(createMockDownload(2, "test-app-pro"));
+
+      removeDownloadItem("test-app");
+
+      expect(downloads.value).toHaveLength(1);
+      expect(downloads.value[0].pkgname).toBe("test-app-pro");
+    });
+
+    it("should correctly handle removing items at the start, middle, and end", () => {
+      downloads.value.push(createMockDownload(1, "app-1"));
+      downloads.value.push(createMockDownload(2, "to-remove"));
+      downloads.value.push(createMockDownload(3, "app-2"));
+      downloads.value.push(createMockDownload(4, "to-remove"));
+      downloads.value.push(createMockDownload(5, "app-3"));
+      downloads.value.push(createMockDownload(6, "to-remove"));
+
+      removeDownloadItem("to-remove");
+
+      expect(downloads.value).toHaveLength(3);
+      expect(downloads.value.map((d) => d.pkgname)).toEqual([
+        "app-1",
+        "app-2",
+        "app-3",
+      ]);
     });
   });
 });
