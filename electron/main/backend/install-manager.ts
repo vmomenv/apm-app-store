@@ -445,20 +445,20 @@ ipcMain.handle("check-installed", async (_event, pkgname: string) => {
     if (isInstalled) return true;
   }
 
-  // 如果脚本不存在或检测不到，使用 dpkg-query 作为后备
-  logger.info(`尝试使用 dpkg-query 检测: ${pkgname}`);
-  const { code } = await runCommandCapture("dpkg-query", [
-    "-W",
-    "-f='${Status}'",
-    pkgname,
-  ]);
+  // // 如果脚本不存在或检测不到，使用 dpkg-query 作为后备
+  // logger.info(`尝试使用 dpkg-query 检测: ${pkgname}`);
+  // const { code } = await runCommandCapture("dpkg-query", [
+  //   "-W",
+  //   "-f='${Status}'",
+  //   pkgname,
+  // ]);
 
-  if (code === 0) {
-    isInstalled = true;
-    logger.info(`应用已安装 (dpkg-query 检测): ${pkgname}`);
-  } else {
-    logger.info(`应用未安装: ${pkgname}`);
-  }
+  // if (code === 0) {
+  //   isInstalled = true;
+  //   logger.info(`应用已安装 (dpkg-query 检测): ${pkgname}`);
+  // } else {
+  //   logger.info(`应用未安装: ${pkgname}`);
+  // }
 
   return isInstalled;
 });
