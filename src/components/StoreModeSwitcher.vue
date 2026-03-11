@@ -32,7 +32,5 @@ const modes = [
 const setMode = (mode: StoreMode) => {
   currentStoreMode.value = mode;
   localStorage.setItem("store_mode", mode);
-  // Reload page to re-fetch data based on new mode
-  window.location.reload();
 };
 </script>

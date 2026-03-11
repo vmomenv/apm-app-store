@@ -235,6 +235,62 @@ const updateError = ref("");
 const showUninstallModal = ref(false);
 const uninstallTargetApp: Ref<App | null> = ref(null);
 
+// 缓存不同模式的数据
+const storeCache = ref<Record<string, {
+  apps: App[];
+  categories: Record<string, any>;
+  homeLinks: any[];
+  homeLists: any[];
+}>>({});
+
+const saveToCache = (mode: string) => {
+  storeCache.value[mode] = {
+    apps: [...apps.value],
+    categories: { ...categories.value },
+    homeLinks: [...homeLinks.value],
+    homeLists: [...homeLists.value],
+  };
+};
+
+const restoreFromCache = (mode: string) => {
+  const cache = storeCache.value[mode];
+  if (cache) {
+    apps.value = [...cache.apps];
+    categories.value = { ...cache.categories };
+    homeLinks.value = [...cache.homeLinks];
+    homeLists.value = [...cache.homeLists];
+    return true;
+  }
+  return false;
+};
+
+// 监听模式变化
+watch(currentStoreMode, async (newMode, oldMode) => {
+  if (oldMode) {
+    saveToCache(oldMode);
+  }
+  
+  if (!restoreFromCache(newMode)) {
+    // 如果没有缓存，清空当前状态并重新加载
+    apps.value = [];
+    categories.value = {};
+    homeLinks.value = [];
+    homeLists.value = [];
+    
+    loading.value = true;
+    await loadCategories();
+    await Promise.all([
+      loadHome(),
+      new Promise<void>((resolve) => {
+        loadApps(() => {
+          loading.value = false;
+          resolve();
+        });
+      }),
+    ]);
+  }
+});
+
 // 计算属性
 const filteredApps = computed(() => {
   let result = [...apps.value];
@@ -314,7 +370,7 @@ const selectCategory = (category: string) => {
   activeCategory.value = category;
   searchQuery.value = "";
   isSidebarOpen.value = false;
-  if (category === "home") {
+  if (category === "home" && homeLinks.value.length === 0 && homeLists.value.length === 0) {
     loadHome();
   }
 };
