@@ -274,6 +274,7 @@ const emit = defineEmits<{
   (e: "remove", app: App): void;
   (e: "open-preview", index: number): void;
   (e: "open-app", pkgname: string): void;
+  (e: "check-install", app: App): void;
 }>();
 
 const appPkgname = computed(() => props.app?.pkgname);
@@ -304,6 +305,16 @@ const displayApp = computed(() => {
     ? props.app.sparkApp || props.app
     : props.app.apmApp || props.app;
 });
+
+watch(
+  () => displayApp.value,
+  (newApp) => {
+    if (newApp) {
+      emit("check-install", newApp);
+    }
+  },
+  { immediate: false },
+);
 
 const activeDownload = computed(() => {
   return downloads.value.find((d) => d.pkgname === displayApp.value?.pkgname);

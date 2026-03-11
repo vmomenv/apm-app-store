@@ -69,6 +69,7 @@
       @remove="onDetailRemove"
       @open-preview="openScreenPreview"
       @open-app="openDownloadedApp"
+      @check-install="checkAppInstalled"
     />
 
     <ScreenPreview
