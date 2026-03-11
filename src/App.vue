@@ -913,12 +913,12 @@ const closeDownloadDetail = () => {
   currentDownload.value = null;
 };
 
-const openDownloadedApp = (pkgname: string) => {
+const openDownloadedApp = (pkgname: string, origin?: "spark" | "apm") => {
   // const encodedPkg = encodeURIComponent(download.pkgname);
   // openApmStoreUrl(`apmstore://launch?pkg=${encodedPkg}`, {
   //   fallbackText: `打开应用: ${download.pkgname}`
   // });
-  window.ipcRenderer.invoke("launch-app", pkgname);
+  window.ipcRenderer.invoke("launch-app", { pkgname, origin });
 };
 
 const loadCategories = async () => {

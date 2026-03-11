@@ -223,7 +223,7 @@ const emit = defineEmits<{
   (e: "resume", download: DownloadItem): void;
   (e: "cancel", download: DownloadItem): void;
   (e: "retry", download: DownloadItem): void;
-  (e: "open-app", download: string): void;
+  (e: "open-app", pkgname: string, origin?: "spark" | "apm"): void;
 }>();
 
 const close = () => {
@@ -248,7 +248,7 @@ const retry = () => {
 
 const openApp = () => {
   if (props.download) {
-    emit("open-app", props.download.pkgname);
+    emit("open-app", props.download.pkgname, props.download.origin);
   }
 };
 

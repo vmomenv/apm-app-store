@@ -109,7 +109,7 @@
               <button
                 type="button"
                 class="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-brand to-brand-dark px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5"
-                @click="emit('open-app', displayApp?.pkgname || '')"
+                @click="emit('open-app', displayApp?.pkgname || '', displayApp?.origin)"
               >
                 <i class="fas fa-external-link-alt"></i>
                 <span>打开</span>
@@ -273,7 +273,7 @@ const emit = defineEmits<{
   (e: "install", app: App): void;
   (e: "remove", app: App): void;
   (e: "open-preview", index: number): void;
-  (e: "open-app", pkgname: string): void;
+  (e: "open-app", pkgname: string, origin?: "spark" | "apm"): void;
   (e: "check-install", app: App): void;
 }>();
 

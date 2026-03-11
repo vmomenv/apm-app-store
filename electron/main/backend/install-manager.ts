@@ -634,13 +634,22 @@ ipcMain.handle("uninstall-installed", async (_event, pkgname: string) => {
   };
 });
 
-ipcMain.handle("launch-app", async (_event, pkgname: string) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ipcMain.handle("launch-app", async (_event, payload: any) => {
+  const pkgname = typeof payload === "string" ? payload : payload.pkgname;
+  const origin = typeof payload === "string" ? "spark" : payload.origin;
+
   if (!pkgname) {
     logger.warn("No pkgname provided for launch-app");
   }
 
-  const execCommand = "/opt/spark-store/extras/app-launcher";
-  const execParams = ["start", pkgname];
+  let execCommand = "/opt/spark-store/extras/app-launcher";
+  let execParams = ["start", pkgname];
+
+  if (origin === "apm") {
+    execCommand = "/opt/spark-store/extras/apm-launcher";
+    execParams = ["launch", pkgname];
+  }
 
   logger.info(
     `Launching app: ${pkgname} with command: ${execCommand} ${execParams.join(" ")}`,
