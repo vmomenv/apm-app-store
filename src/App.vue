@@ -466,7 +466,7 @@ const openDetail = (app: App | Record<string, unknown>) => {
 
 const checkAppInstalled = (app: App) => {
   window.ipcRenderer
-    .invoke("check-installed", app.pkgname)
+    .invoke("check-installed", { pkgname: app.pkgname, origin: app.origin })
     .then((isInstalled: boolean) => {
       currentAppIsInstalled.value = isInstalled;
     });

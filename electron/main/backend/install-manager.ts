@@ -413,16 +413,43 @@ async function processNextInQueue() {
   }
 }
 
-ipcMain.handle("check-installed", async (_event, pkgname: string) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ipcMain.handle("check-installed", async (_event, payload: any) => {
+  const pkgname = typeof payload === "string" ? payload : payload.pkgname;
+  const origin = typeof payload === "string" ? "spark" : payload.origin;
+
   if (!pkgname) {
     logger.warn("check-installed missing pkgname");
     return false;
   }
 
-  logger.info(`检查应用是否已安装: ${pkgname}`);
+  logger.info(`检查应用是否已安装: ${pkgname} (来源: ${origin})`);
+
+  let isInstalled = false;
+
+  if (origin === "apm") {
+    const { code, stdout } = await runCommandCapture("apm", ["list", "--installed"]);
+    if (code === 0) {
+      // eslint-disable-next-line no-control-regex
+      const cleanStdout = stdout.replace(/\x1b\[[0-9;]*m/g, "");
+      const lines = cleanStdout.split("\n");
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("Listing") || trimmed.startsWith("[INFO]") || trimmed.startsWith("警告")) continue;
+        if (trimmed.includes("/")) {
+          const installedPkg = trimmed.split("/")[0].trim();
+          if (installedPkg === pkgname) {
+            isInstalled = true;
+            logger.info(`应用已安装 (APM检测): ${pkgname}`);
+            break;
+          }
+        }
+      }
+    }
+    return isInstalled;
+  }
 
   const checkScript = "/opt/spark-store/extras/check-is-installed";
-  let isInstalled = false;
 
   // 首先尝试使用内置脚本
   if (fs.existsSync(checkScript)) {
@@ -449,20 +476,20 @@ ipcMain.handle("check-installed", async (_event, pkgname: string) => {
     if (isInstalled) return true;
   }
 
-  // // 如果脚本不存在或检测不到，使用 dpkg-query 作为后备
-  // logger.info(`尝试使用 dpkg-query 检测: ${pkgname}`);
-  // const { code } = await runCommandCapture("dpkg-query", [
-  //   "-W",
-  //   "-f='${Status}'",
-  //   pkgname,
-  // ]);
+  // 如果脚本不存在或检测不到，使用 dpkg-query 作为后备
+  logger.info(`尝试使用 dpkg-query 检测: ${pkgname}`);
+  const { code, stdout } = await runCommandCapture("dpkg-query", [
+    "-W",
+    "-f=${Status}",
+    pkgname,
+  ]);
 
-  // if (code === 0) {
-  //   isInstalled = true;
-  //   logger.info(`应用已安装 (dpkg-query 检测): ${pkgname}`);
-  // } else {
-  //   logger.info(`应用未安装: ${pkgname}`);
-  // }
+  if (code === 0 && stdout.includes("install ok installed")) {
+    isInstalled = true;
+    logger.info(`应用已安装 (dpkg-query 检测): ${pkgname}`);
+  } else {
+    logger.info(`应用未安装 (dpkg-query 检测): ${pkgname}`);
+  }
 
   return isInstalled;
 });
