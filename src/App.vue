@@ -320,33 +320,33 @@ const selectCategory = (category: string) => {
 
 const openDetail = (app: App | Record<string, unknown>) => {
   // 提取 pkgname（必须存在）
-  const pkgname = (app as any).pkgname;
+  const pkgname = (app as Record<string, string>).pkgname;
   if (!pkgname) {
-    console.warn('openDetail: 缺少 pkgname', app);
+    console.warn("openDetail: 缺少 pkgname", app);
     return;
   }
 
   // 尝试从全局 apps 中查找完整 App
-  let fullApp = apps.value.find(a => a.pkgname === pkgname);
+  let fullApp = apps.value.find((a) => a.pkgname === pkgname);
   if (!fullApp) {
     // 构造一个最小可用的 App 对象
     fullApp = {
-      name: (app as any).name || '',
+      name: (app as Record<string, string>).name || "",
       pkgname: pkgname,
-      version: (app as any).version || '',
-      filename: (app as any).filename || '',
-      category: (app as any).category || 'unknown',
-      torrent_address: '',
-      author: '',
-      contributor: '',
-      website: '',
-      update: '',
-      size: '',
-      more: (app as any).more || '',
-      tags: '',
+      version: (app as Record<string, string>).version || "",
+      filename: (app as Record<string, string>).filename || "",
+      category: (app as Record<string, string>).category || "unknown",
+      torrent_address: "",
+      author: "",
+      contributor: "",
+      website: "",
+      update: "",
+      size: "",
+      more: (app as Record<string, string>).more || "",
+      tags: "",
       img_urls: [],
-      icons: '',
-      currentStatus: 'not-installed',
+      icons: "",
+      currentStatus: "not-installed",
     };
   }
 
