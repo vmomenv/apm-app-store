@@ -26,12 +26,14 @@
         <span
           :class="[
             'rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-sm',
-            app.origin === 'spark'
-              ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
-              : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+            app.isMerged
+              ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
+              : app.origin === 'spark'
+                ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
+                : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
           ]"
         >
-          {{ app.origin === "spark" ? "Spark" : "APM" }}
+          {{ app.isMerged ? "Spark/APM" : app.origin === "spark" ? "Spark" : "APM" }}
         </span>
       </div>
       <div class="text-sm text-slate-500 dark:text-slate-400">

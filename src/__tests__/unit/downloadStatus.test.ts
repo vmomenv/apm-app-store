@@ -22,6 +22,7 @@ describe("downloadStatus", () => {
     startTime: Date.now(),
     logs: [],
     source: "Test",
+    origin: "apm",
     retry: false,
   });
 

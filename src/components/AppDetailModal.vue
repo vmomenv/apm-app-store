@@ -34,22 +34,42 @@
             <div class="space-y-1">
               <div class="flex items-center gap-3">
                 <p class="text-2xl font-bold text-slate-900 dark:text-white">
-                  {{ app?.name || "" }}
+                  {{ displayApp?.name || "" }}
                 </p>
+                <div v-if="app?.isMerged" class="flex gap-1 overflow-hidden rounded-md shadow-sm border border-slate-200 dark:border-slate-700 font-medium ml-1">
+                  <button
+                    v-if="app.sparkApp"
+                    type="button"
+                    class="px-2 py-0.5 text-[10px] uppercase tracking-wider transition-colors"
+                    :class="viewingOrigin === 'spark' ? 'bg-orange-500 text-white' : 'bg-slate-100/50 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                    @click="viewingOrigin = 'spark'"
+                  >
+                    Spark
+                  </button>
+                  <button
+                    v-if="app.apmApp"
+                    type="button"
+                    class="px-2 py-0.5 text-[10px] uppercase tracking-wider transition-colors"
+                    :class="viewingOrigin === 'apm' ? 'bg-blue-500 text-white' : 'bg-slate-100/50 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                    @click="viewingOrigin = 'apm'"
+                  >
+                    APM
+                  </button>
+                </div>
                 <span
-                  v-if="app"
+                  v-else-if="displayApp"
                   :class="[
                     'rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-sm',
-                    app.origin === 'spark'
+                    displayApp.origin === 'spark'
                       ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
                       : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
                   ]"
                 >
-                  {{ app.origin === "spark" ? "Spark" : "APM" }}
+                  {{ displayApp.origin === "spark" ? "Spark" : "APM" }}
                 </span>
               </div>
               <p class="text-sm text-slate-500 dark:text-slate-400">
-                {{ app?.pkgname || "" }} · {{ app?.version || "" }}
+                {{ displayApp?.pkgname || "" }} · {{ displayApp?.version || "" }}
                 <span v-if="downloadCount"> · 下载量：{{ downloadCount }}</span>
               </p>
             </div>
@@ -77,7 +97,7 @@
               <button
                 type="button"
                 class="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-brand to-brand-dark px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5"
-                @click="emit('open-app', app?.pkgname || '')"
+                @click="emit('open-app', displayApp?.pkgname || '')"
               >
                 <i class="fas fa-external-link-alt"></i>
                 <span>打开</span>
@@ -130,82 +150,82 @@
 
         <div class="mt-6 grid gap-4 sm:grid-cols-2">
           <div
-            v-if="app?.author"
+            v-if="displayApp?.author"
             class="rounded-2xl border border-slate-200/60 p-4 dark:border-slate-800/60"
           >
             <p class="text-xs uppercase tracking-wide text-slate-400">作者</p>
             <p class="text-sm font-medium text-slate-800 dark:text-slate-200">
-              {{ app.author }}
+              {{ displayApp.author }}
             </p>
           </div>
           <div
-            v-if="app?.contributor"
+            v-if="displayApp?.contributor"
             class="rounded-2xl border border-slate-200/60 p-4 dark:border-slate-800/60"
           >
             <p class="text-xs uppercase tracking-wide text-slate-400">贡献者</p>
             <p class="text-sm font-medium text-slate-800 dark:text-slate-200">
-              {{ app.contributor }}
+              {{ displayApp.contributor }}
             </p>
           </div>
           <div
-            v-if="app?.size"
+            v-if="displayApp?.size"
             class="rounded-2xl border border-slate-200/60 p-4 dark:border-slate-800/60"
           >
             <p class="text-xs uppercase tracking-wide text-slate-400">大小</p>
             <p class="text-sm font-medium text-slate-800 dark:text-slate-200">
-              {{ app.size }}
+              {{ displayApp.size }}
             </p>
           </div>
           <div
-            v-if="app?.update"
+            v-if="displayApp?.update"
             class="rounded-2xl border border-slate-200/60 p-4 dark:border-slate-800/60"
           >
             <p class="text-xs uppercase tracking-wide text-slate-400">
               更新时间
             </p>
             <p class="text-sm font-medium text-slate-800 dark:text-slate-200">
-              {{ app.update }}
+              {{ displayApp.update }}
             </p>
           </div>
           <div
-            v-if="app?.website"
+            v-if="displayApp?.website"
             class="rounded-2xl border border-slate-200/60 p-4 dark:border-slate-800/60"
           >
             <p class="text-xs uppercase tracking-wide text-slate-400">网站</p>
             <a
-              :href="app.website"
+              :href="displayApp.website"
               target="_blank"
               class="text-sm font-medium text-brand hover:underline"
-              >{{ app.website }}</a
+              >{{ displayApp.website }}</a
             >
           </div>
           <div
-            v-if="app?.version"
+            v-if="displayApp?.version"
             class="rounded-2xl border border-slate-200/60 p-4 dark:border-slate-800/60"
           >
             <p class="text-xs uppercase tracking-wide text-slate-400">版本</p>
             <p class="text-sm font-medium text-slate-800 dark:text-slate-200">
-              {{ app.version }}
+              {{ displayApp.version }}
             </p>
           </div>
           <div
-            v-if="app?.tags"
+            v-if="displayApp?.tags"
             class="rounded-2xl border border-slate-200/60 p-4 dark:border-slate-800/60"
           >
             <p class="text-xs uppercase tracking-wide text-slate-400">标签</p>
             <p class="text-sm font-medium text-slate-800 dark:text-slate-200">
-              {{ app.tags }}
+              {{ displayApp.tags }}
             </p>
           </div>
         </div>
 
-        <div v-if="app?.more && app.more.trim() !== ''" class="mt-6 space-y-3">
+        <div v-if="displayApp?.more && displayApp.more.trim() !== ''" class="mt-6 space-y-3">
           <h3 class="text-lg font-semibold text-slate-900 dark:text-white">
             应用详情
           </h3>
           <div
             class="max-h-60 space-y-2 overflow-y-auto rounded-2xl border border-slate-200/60 bg-slate-50/80 p-4 text-sm leading-relaxed text-slate-600 dark:border-slate-800/60 dark:bg-slate-900/60 dark:text-slate-300"
-            v-html="app.more.replace(/\n/g, '<br>')"
+            v-html="displayApp.more.replace(/\n/g, '<br>')"
           ></div>
         </div>
       </div>
@@ -235,8 +255,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "close"): void;
-  (e: "install"): void;
-  (e: "remove"): void;
+  (e: "install", app: App): void;
+  (e: "remove", app: App): void;
   (e: "open-preview", index: number): void;
   (e: "open-app", pkgname: string): void;
 }>();
@@ -245,15 +265,33 @@ const appPkgname = computed(() => props.app?.pkgname);
 
 const isIconLoaded = ref(false);
 
+const viewingOrigin = ref<"spark" | "apm">("spark");
+
 watch(
   () => props.app,
-  () => {
+  (newApp) => {
     isIconLoaded.value = false;
+    if (newApp) {
+      if (newApp.isMerged) {
+        viewingOrigin.value = newApp.sparkApp ? "spark" : "apm";
+      } else {
+        viewingOrigin.value = newApp.origin;
+      }
+    }
   },
+  { immediate: true },
 );
 
+const displayApp = computed(() => {
+  if (!props.app) return null;
+  if (!props.app.isMerged) return props.app;
+  return viewingOrigin.value === "spark"
+    ? props.app.sparkApp || props.app
+    : props.app.apmApp || props.app;
+});
+
 const activeDownload = computed(() => {
-  return downloads.value.find((d) => d.pkgname === props.app?.pkgname);
+  return downloads.value.find((d) => d.pkgname === displayApp.value?.pkgname);
 });
 
 const { installFeedback } = useInstallFeedback(appPkgname);
@@ -278,20 +316,20 @@ const installBtnText = computed(() => {
   return "安装";
 });
 const iconPath = computed(() => {
-  if (!props.app) return "";
+  if (!displayApp.value) return "";
   const arch = window.apm_store.arch || "amd64-apm";
   const finalArch =
-    props.app.origin === "spark"
+    displayApp.value.origin === "spark"
       ? arch.replace("-apm", "-store")
       : arch.replace("-store", "-apm");
-  return `${APM_STORE_BASE_URL}/${finalArch}/${props.app.category}/${props.app.pkgname}/icon.png`;
+  return `${APM_STORE_BASE_URL}/${finalArch}/${displayApp.value.category}/${displayApp.value.pkgname}/icon.png`;
 });
 
 const downloadCount = ref<string>("");
 
 // 监听 app 变化，获取新app的下载量
 watch(
-  () => props.app,
+  () => displayApp.value,
   async (newApp) => {
     if (newApp) {
       downloadCount.value = "";
@@ -322,11 +360,15 @@ const closeModal = () => {
 };
 
 const handleInstall = () => {
-  emit("install");
+  if (displayApp.value) {
+    emit("install", displayApp.value);
+  }
 };
 
 const handleRemove = () => {
-  emit("remove");
+  if (displayApp.value) {
+    emit("remove", displayApp.value);
+  }
 };
 
 const openPreview = (index: number) => {

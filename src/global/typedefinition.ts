@@ -107,6 +107,10 @@ export interface App {
   flags?: string; // Tags in apm packages manager, e.g. "automatic" for dependencies
   arch?: string; // Architecture, e.g. "amd64", "arm64"
   currentStatus: "not-installed" | "installed"; // Current installation status
+  isMerged?: boolean; // FLAG for overlapping apps
+  sparkApp?: App; // Optional reference to the spark version
+  apmApp?: App; // Optional reference to the apm version
+  viewingOrigin?: "spark" | "apm"; // Currently viewed origin inside the app modal
 }
 
 export interface UpdateAppItem {

@@ -65,8 +65,8 @@
       :screenshots="screenshots"
       :isinstalled="currentAppIsInstalled"
       @close="closeDetail"
-      @install="handleInstall"
-      @remove="requestUninstallFromDetail"
+      @install="onDetailInstall"
+      @remove="onDetailRemove"
       @open-preview="openScreenPreview"
       @open-app="openDownloadedApp"
     />
@@ -163,6 +163,7 @@ import {
   handleInstall,
   handleRetry,
   handleUpgrade,
+  handleRemove,
 } from "./modules/processInstall";
 import type {
   App,
@@ -295,6 +296,27 @@ watch(currentStoreMode, async (newMode, oldMode) => {
 const filteredApps = computed(() => {
   let result = [...apps.value];
 
+  // 合并相同包名的应用 (混合模式)
+  if (currentStoreMode.value === "hybrid") {
+    const mergedMap = new Map<string, App>();
+    for (const app of result) {
+      const existing = mergedMap.get(app.pkgname);
+      if (existing) {
+        if (!existing.isMerged) {
+          existing.isMerged = true;
+          // 根据当前的 origin 分配到对应的属性
+          if (existing.origin === "spark") existing.sparkApp = { ...existing };
+          else if (existing.origin === "apm") existing.apmApp = { ...existing };
+        }
+        if (app.origin === "spark") existing.sparkApp = app;
+        else if (app.origin === "apm") existing.apmApp = app;
+      } else {
+        mergedMap.set(app.pkgname, { ...app });
+      }
+    }
+    result = Array.from(mergedMap.values());
+  }
+
   // 按分类筛选
   if (activeCategory.value !== "all") {
     result = result.filter((app) => app.category === activeCategory.value);
@@ -383,8 +405,12 @@ const openDetail = (app: App | Record<string, unknown>) => {
     return;
   }
 
-  // 尝试从全局 apps 中查找完整 App
-  let fullApp = apps.value.find(a => a.pkgname === pkgname);
+  // 首先尝试从当前已经处理好（合并/筛选）的 filteredApps 中查找，以便获取 isMerged 状态等
+  let fullApp = filteredApps.value.find(a => a.pkgname === pkgname);
+  // 如果没找到（可能是从已安装列表之类的其他入口打开的），回退到全局 apps 中查找完整 App
+  if (!fullApp) {
+    fullApp = apps.value.find(a => a.pkgname === pkgname);
+  }
   if (!fullApp) {
     // 构造一个最小可用的 App 对象
     fullApp = {
@@ -769,6 +795,14 @@ const requestUninstallFromDetail = () => {
   }
 };
 
+const onDetailRemove = (app: App) => {
+  requestUninstall(app);
+};
+
+const onDetailInstall = (app: App) => {
+  handleInstall(app);
+};
+
 const closeUninstallModal = () => {
   showUninstallModal.value = false;
   uninstallTargetApp.value = null;
@@ -785,8 +819,8 @@ const onUninstallSuccess = () => {
   }
 };
 
-const installCompleteCallback = (pkgname?: string) => {
-  if (currentApp.value && (!pkgname || currentApp.value.pkgname === pkgname)) {
+const installCompleteCallback = (pkgname?: string, status?: string) => {
+  if (currentApp.value && (!pkgname || currentApp.value.pkgname === pkgname) && status === "completed") {
     checkAppInstalled(currentApp.value);
   }
 };

@@ -16,8 +16,6 @@ export const currentStoreMode = ref<StoreMode>(initialMode);
 
 declare global {
   interface Window {
-    apm_store: {
-      arch: string;
-    };
+    apm_store: any;
   }
 }

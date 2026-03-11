@@ -23,11 +23,12 @@ import axios from "axios";
 let downloadIdCounter = 0;
 const logger = pino({ name: "processInstall.ts" });
 
-export const handleInstall = () => {
-  if (!currentApp.value?.pkgname) return;
+export const handleInstall = (appObj?: App) => {
+  const targetApp = appObj || currentApp.value;
+  if (!targetApp?.pkgname) return;
 
-  if (downloads.value.find((d) => d.pkgname === currentApp.value?.pkgname)) {
-    logger.info(`任务已存在，忽略重复添加: ${currentApp.value.pkgname}`);
+  if (downloads.value.find((d) => d.pkgname === targetApp.pkgname)) {
+    logger.info(`任务已存在，忽略重复添加: ${targetApp.pkgname}`);
     return;
   }
 
@@ -35,17 +36,17 @@ export const handleInstall = () => {
   // 创建下载任务
   const arch = window.apm_store.arch || "amd64-apm";
   const finalArch =
-    currentApp.value.origin === "spark"
+    targetApp.origin === "spark"
       ? arch.replace("-apm", "-store")
       : arch.replace("-store", "-apm");
 
   const download: DownloadItem = {
     id: downloadIdCounter,
-    name: currentApp.value.name,
-    pkgname: currentApp.value.pkgname,
-    version: currentApp.value.version,
-    icon: `${APM_STORE_BASE_URL}/${finalArch}/${currentApp.value.category}/${currentApp.value.pkgname}/icon.png`,
-    origin: currentApp.value.origin,
+    name: targetApp.name,
+    pkgname: targetApp.pkgname,
+    version: targetApp.version,
+    icon: `${APM_STORE_BASE_URL}/${finalArch}/${targetApp.category}/${targetApp.pkgname}/icon.png`,
+    origin: targetApp.origin,
     status: "queued",
     progress: 0,
     downloadedSize: 0,
@@ -56,8 +57,8 @@ export const handleInstall = () => {
     logs: [{ time: Date.now(), message: "开始下载..." }],
     source: "APM Store",
     retry: false,
-    filename: currentApp.value.filename,
-    metalinkUrl: `${window.apm_store.arch}/${currentApp.value.category}/${currentApp.value.pkgname}/${currentApp.value.filename}.metalink`,
+    filename: targetApp.filename,
+    metalinkUrl: `${window.apm_store.arch}/${targetApp.category}/${targetApp.pkgname}/${targetApp.filename}.metalink`,
   };
 
   downloads.value.push(download);
@@ -75,7 +76,7 @@ export const handleInstall = () => {
     .post(
       "/handle_post",
       {
-        path: `${window.apm_store.arch}/${currentApp.value.category}/${currentApp.value.pkgname}`,
+        path: `${window.apm_store.arch}/${targetApp.category}/${targetApp.pkgname}`,
       },
       {
         headers: {
@@ -134,11 +135,12 @@ export const handleUpgrade = (app: App) => {
   window.ipcRenderer.send("queue-install", JSON.stringify(download));
 };
 
-export const handleRemove = () => {
-  if (!currentApp.value?.pkgname) return;
+export const handleRemove = (appObj?: App) => {
+  const targetApp = appObj || currentApp.value;
+  if (!targetApp?.pkgname) return;
   window.ipcRenderer.send("remove-installed", {
-    pkgname: currentApp.value.pkgname,
-    origin: currentApp.value.origin,
+    pkgname: targetApp.pkgname,
+    origin: targetApp.origin,
   });
 };
 
