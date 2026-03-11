@@ -23,6 +23,8 @@ export type DownloadItemStatus =
   | "failed"
   | "queued"; // 可根据实际状态扩展
 
+export type StoreMode = "spark" | "apm" | "hybrid";
+
 export interface DownloadItem {
   id: number;
   name: string;
@@ -42,6 +44,7 @@ export interface DownloadItem {
     message: string; // 日志消息
   }>;
   source: string; // 例如 'APM Store'
+  origin: "spark" | "apm"; // 数据来源
   retry: boolean; // 当前是否为重试下载
   upgradeOnly?: boolean; // 是否为仅升级任务
   error?: string;
@@ -99,6 +102,7 @@ export interface App {
   img_urls: string[];
   icons: string;
   category: string; // Frontend added
+  origin: "spark" | "apm"; // 数据来源
   installed?: boolean; // Frontend state
   flags?: string; // Tags in apm packages manager, e.g. "automatic" for dependencies
   arch?: string; // Architecture, e.g. "amd64", "arm64"

@@ -15,7 +15,7 @@
           :title="link.more"
         >
           <img
-            :src="computedImgUrl(link.imgUrl)"
+            :src="computedImgUrl(link)"
             class="h-20 w-full object-contain"
             loading="lazy"
           />
@@ -62,10 +62,14 @@ defineEmits<{
   (e: "open-detail", app: Record<string, unknown>): void;
 }>();
 
-const computedImgUrl = (imgUrl: string) => {
-  if (!imgUrl) return "";
-  // imgUrl is like /home/links/bbs.png -> join with base
-  return `${APM_STORE_BASE_URL}/${window.apm_store.arch}${imgUrl}`;
+const computedImgUrl = (link: Record<string, any>) => {
+  if (!link.imgUrl) return "";
+  const arch = window.apm_store.arch || "amd64-apm";
+  const finalArch =
+    link.origin === "spark"
+      ? arch.replace("-apm", "-store")
+      : arch.replace("-store", "-apm");
+  return `${APM_STORE_BASE_URL}/${finalArch}${link.imgUrl}`;
 };
 
 const onLinkClick = (link: Record<string, unknown>) => {

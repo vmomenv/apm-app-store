@@ -152,6 +152,7 @@ import {
   APM_STORE_BASE_URL,
   currentApp,
   currentAppIsInstalled,
+  currentStoreMode,
 } from "./global/storeConfig";
 import {
   downloads,
@@ -377,8 +378,13 @@ const checkAppInstalled = (app: App) => {
 
 const loadScreenshots = (app: App) => {
   screenshots.value = [];
+  const arch = window.apm_store.arch || "amd64-apm";
+  const finalArch =
+    app.origin === "spark"
+      ? arch.replace("-apm", "-store")
+      : arch.replace("-store", "-apm");
   for (let i = 1; i <= 5; i++) {
-    const screenshotUrl = `${APM_STORE_BASE_URL}/${window.apm_store.arch}/${app.category}/${app.pkgname}/screen_${i}.png`;
+    const screenshotUrl = `${APM_STORE_BASE_URL}/${finalArch}/${app.category}/${app.pkgname}/screen_${i}.png`;
     screenshots.value.push(screenshotUrl);
   }
 };
@@ -411,73 +417,88 @@ const loadHome = async () => {
   homeLinks.value = [];
   homeLists.value = [];
   try {
-    const base = `${APM_STORE_BASE_URL}/${window.apm_store.arch}/home`;
-    // homelinks.json
-    try {
-      const res = await fetch(`${base}/homelinks.json`);
-      if (res.ok) {
-        homeLinks.value = await res.json();
+    const arch = window.apm_store.arch || "amd64-apm";
+    const modes: Array<"spark" | "apm"> = [];
+    if (currentStoreMode.value === "hybrid") modes.push("spark", "apm");
+    else modes.push(currentStoreMode.value as "spark" | "apm");
+
+    for (const mode of modes) {
+      const finalArch =
+        mode === "spark"
+          ? arch.replace("-apm", "-store")
+          : arch.replace("-store", "-apm");
+      const base = `${APM_STORE_BASE_URL}/${finalArch}/home`;
+
+      // homelinks.json
+      try {
+        const res = await fetch(cacheBuster(`${base}/homelinks.json`));
+        if (res.ok) {
+          const links = await res.json();
+          const taggedLinks = links.map((l: any) => ({ ...l, origin: mode }));
+          homeLinks.value.push(...taggedLinks);
+        }
+      } catch (e) {
+        console.warn(`Failed to load ${mode} homelinks.json`, e);
       }
-    } catch (e) {
-      // ignore single file failures
-      console.warn("Failed to load homelinks.json", e);
-    }
 
-    // homelist.json
-    try {
-      const res2 = await fetch(`${base}/homelist.json`);
-      if (res2.ok) {
-        const lists = await res2.json();
-        for (const item of lists) {
-          if (item.type === "appList" && item.jsonUrl) {
-            try {
-              const url = `${APM_STORE_BASE_URL}/${window.apm_store.arch}${item.jsonUrl}`;
-              const r = await fetch(url);
-              if (r.ok) {
-                const appsJson = await r.json();
-                const rawApps = appsJson || [];
-                const apps = await Promise.all(
-                  rawApps.map(async (a: Record<string, unknown>) => {
-                    const baseApp = {
-                      name: a.Name || a.name || a.Pkgname || a.PkgName || "",
-                      pkgname: a.Pkgname || a.pkgname || "",
-                      category: a.Category || a.category || "unknown",
-                      more: a.More || a.more || "",
-                      version: a.Version || "",
-                      filename: a.Filename || a.filename || "",
-                    };
+      // homelist.json
+      try {
+        const res2 = await fetch(cacheBuster(`${base}/homelist.json`));
+        if (res2.ok) {
+          const lists = await res2.json();
+          for (const item of lists) {
+            if (item.type === "appList" && item.jsonUrl) {
+              try {
+                const url = `${APM_STORE_BASE_URL}/${finalArch}${item.jsonUrl}`;
+                const r = await fetch(cacheBuster(url));
+                if (r.ok) {
+                  const appsJson = await r.json();
+                  const rawApps = appsJson || [];
+                  const apps = await Promise.all(
+                    rawApps.map(async (a: any) => {
+                      const baseApp = {
+                        name: a.Name || a.name || a.Pkgname || a.PkgName || "",
+                        pkgname: a.Pkgname || a.pkgname || "",
+                        category: a.Category || a.category || "unknown",
+                        more: a.More || a.more || "",
+                        version: a.Version || "",
+                        filename: a.Filename || a.filename || "",
+                        origin: mode as "spark" | "apm",
+                      };
 
-                    // 根据官网的要求，读取Category和Pkgname，拼接出 源地址/架构/Category/Pkgname/app.json来获取对应的真实json
-                    try {
-                      const realAppUrl = `${APM_STORE_BASE_URL}/${window.apm_store.arch}/${baseApp.category}/${baseApp.pkgname}/app.json`;
-                      const realRes = await fetch(realAppUrl);
-                      if (realRes.ok) {
-                        const realApp = await realRes.json();
-                        // 用真实json的filename字段和More字段来增补和覆盖当前的json
-                        if (realApp.Filename)
-                          baseApp.filename = realApp.Filename;
-                        if (realApp.More) baseApp.more = realApp.More;
-                        if (realApp.Name) baseApp.name = realApp.Name;
+                      try {
+                        const realAppUrl = `${APM_STORE_BASE_URL}/${finalArch}/${baseApp.category}/${baseApp.pkgname}/app.json`;
+                        const realRes = await fetch(cacheBuster(realAppUrl));
+                        if (realRes.ok) {
+                          const realApp = await realRes.json();
+                          if (realApp.Filename)
+                            baseApp.filename = realApp.Filename;
+                          if (realApp.More) baseApp.more = realApp.More;
+                          if (realApp.Name) baseApp.name = realApp.Name;
+                        }
+                      } catch (e) {
+                        console.warn(
+                          `Failed to fetch real app.json for ${baseApp.pkgname}`,
+                          e,
+                        );
                       }
-                    } catch (e) {
-                      console.warn(
-                        `Failed to fetch real app.json for ${baseApp.pkgname}`,
-                        e,
-                      );
-                    }
-                    return baseApp;
-                  }),
-                );
-                homeLists.value.push({ title: item.name || "推荐", apps });
+                      return baseApp;
+                    }),
+                  );
+                  homeLists.value.push({
+                    title: `${item.name || "推荐"} (${mode === "spark" ? "星火" : "APM"})`,
+                    apps,
+                  });
+                }
+              } catch (e) {
+                console.warn("Failed to load home list", item, e);
               }
-            } catch (e) {
-              console.warn("Failed to load home list", item, e);
             }
           }
         }
+      } catch (e) {
+        console.warn(`Failed to load ${mode} homelist.json`, e);
       }
-    } catch (e) {
-      console.warn("Failed to load homelist.json", e);
     }
   } catch (error: unknown) {
     homeError.value = (error as Error)?.message || "加载首页失败";
@@ -598,6 +619,7 @@ const upgradeSingleApp = (app: UpdateAppItem) => {
       size: "",
       img_urls: [],
       icons: "",
+      origin: "apm", // Default to APM if unknown, or try to guess
       currentStatus: "installed",
     };
     handleUpgrade(minimalApp);
@@ -656,6 +678,7 @@ const refreshInstalledApps = async () => {
           size: "",
           img_urls: [],
           icons: "",
+          origin: app.origin || (app.arch?.includes("apm") ? "apm" : "spark"),
           currentStatus: "installed",
           arch: app.arch,
           flags: app.flags,
@@ -800,12 +823,36 @@ const openDownloadedApp = (pkgname: string) => {
 
 const loadCategories = async () => {
   try {
-    const response = await axiosInstance.get(
-      cacheBuster(`/${window.apm_store.arch}/categories.json`),
-    );
-    categories.value = response.data;
+    const arch = window.apm_store.arch || "amd64-apm";
+    const modes: Array<"spark" | "apm"> = [];
+    if (currentStoreMode.value === "hybrid") modes.push("spark", "apm");
+    else modes.push(currentStoreMode.value as "spark" | "apm");
+
+    const categoryData: Record<string, { zh: string; origin: string }> = {};
+
+    for (const mode of modes) {
+      const finalArch =
+        mode === "spark"
+          ? arch.replace("-apm", "-store")
+          : arch.replace("-store", "-apm");
+      const path = mode === "spark" ? "/store/categories.json" : `/${finalArch}/categories.json`;
+      
+      try {
+        const response = await axiosInstance.get(cacheBuster(path));
+        const data = response.data;
+        Object.keys(data).forEach((key) => {
+          categoryData[key] = {
+            zh: data[key].zh || data[key],
+            origin: mode,
+          };
+        });
+      } catch (e) {
+        logger.error(`读取 ${mode} categories.json 失败: ${e}`);
+      }
+    }
+    categories.value = categoryData;
   } catch (error) {
-    logger.error(`读取 categories.json 失败: ${error}`);
+    logger.error(`读取 categories 失败: ${error}`);
   }
 };
 
@@ -815,14 +862,27 @@ const loadApps = async (onFirstBatch?: () => void) => {
 
     const categoriesList = Object.keys(categories.value || {});
     let firstBatchCallDone = false;
+    const arch = window.apm_store.arch || "amd64-apm";
 
     // 并发加载所有分类，每个分类自带重试机制
     await Promise.all(
       categoriesList.map(async (category) => {
         try {
-          logger.info(`加载分类: ${category}`);
+          const catInfo = categories.value[category];
+          const mode = catInfo.origin;
+          const finalArch =
+            mode === "spark"
+              ? arch.replace("-apm", "-store")
+              : arch.replace("-store", "-apm");
+
+          const path =
+            mode === "spark"
+              ? `/store/${category}/applist.json`
+              : `/${finalArch}/${category}/applist.json`;
+
+          logger.info(`加载分类: ${category} (来源: ${mode})`);
           const categoryApps = await fetchWithRetry<AppJson[]>(
-            cacheBuster(`/${window.apm_store.arch}/${category}/applist.json`),
+            cacheBuster(path),
           );
 
           const normalizedApps = (categoryApps || []).map((appJson) => ({
@@ -844,6 +904,7 @@ const loadApps = async (onFirstBatch?: () => void) => {
                 : appJson.img_urls,
             icons: appJson.icons,
             category: category,
+            origin: mode as "spark" | "apm",
             currentStatus: "not-installed" as const,
           }));
 

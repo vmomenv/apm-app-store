@@ -36,7 +36,17 @@
                 <p class="text-2xl font-bold text-slate-900 dark:text-white">
                   {{ app?.name || "" }}
                 </p>
-                <!-- Close button for mobile layout could be considered here if needed, but for now sticking to desktop layout logic mainly -->
+                <span
+                  v-if="app"
+                  :class="[
+                    'rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-sm',
+                    app.origin === 'spark'
+                      ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
+                      : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+                  ]"
+                >
+                  {{ app.origin === "spark" ? "Spark" : "APM" }}
+                </span>
               </div>
               <p class="text-sm text-slate-500 dark:text-slate-400">
                 {{ app?.pkgname || "" }} · {{ app?.version || "" }}
@@ -269,7 +279,12 @@ const installBtnText = computed(() => {
 });
 const iconPath = computed(() => {
   if (!props.app) return "";
-  return `${APM_STORE_BASE_URL}/${window.apm_store.arch}/${props.app.category}/${props.app.pkgname}/icon.png`;
+  const arch = window.apm_store.arch || "amd64-apm";
+  const finalArch =
+    props.app.origin === "spark"
+      ? arch.replace("-apm", "-store")
+      : arch.replace("-store", "-apm");
+  return `${APM_STORE_BASE_URL}/${finalArch}/${props.app.category}/${props.app.pkgname}/icon.png`;
 });
 
 const downloadCount = ref<string>("");
@@ -281,7 +296,12 @@ watch(
     if (newApp) {
       downloadCount.value = "";
       try {
-        const url = `${APM_STORE_BASE_URL}/${window.apm_store.arch}/${newApp.category}/${newApp.pkgname}/download-times.txt`;
+        const arch = window.apm_store.arch || "amd64-apm";
+        const finalArch =
+          newApp.origin === "spark"
+            ? arch.replace("-apm", "-store")
+            : arch.replace("-store", "-apm");
+        const url = `${APM_STORE_BASE_URL}/${finalArch}/${newApp.category}/${newApp.pkgname}/download-times.txt`;
         const resp = await axios.get(url, { responseType: "text" });
         if (resp.status === 200) {
           downloadCount.value = String(resp.data).trim();

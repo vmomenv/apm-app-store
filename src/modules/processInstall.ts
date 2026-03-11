@@ -33,12 +33,19 @@ export const handleInstall = () => {
 
   downloadIdCounter += 1;
   // 创建下载任务
+  const arch = window.apm_store.arch || "amd64-apm";
+  const finalArch =
+    currentApp.value.origin === "spark"
+      ? arch.replace("-apm", "-store")
+      : arch.replace("-store", "-apm");
+
   const download: DownloadItem = {
     id: downloadIdCounter,
     name: currentApp.value.name,
     pkgname: currentApp.value.pkgname,
     version: currentApp.value.version,
-    icon: `${APM_STORE_BASE_URL}/${window.apm_store.arch}/${currentApp.value.category}/${currentApp.value.pkgname}/icon.png`,
+    icon: `${APM_STORE_BASE_URL}/${finalArch}/${currentApp.value.category}/${currentApp.value.pkgname}/icon.png`,
+    origin: currentApp.value.origin,
     status: "queued",
     progress: 0,
     downloadedSize: 0,
@@ -97,12 +104,18 @@ export const handleUpgrade = (app: App) => {
   }
 
   downloadIdCounter += 1;
+  const arch = window.apm_store.arch || "amd64-apm";
+  const finalArch =
+    app.origin === "spark"
+      ? arch.replace("-apm", "-store")
+      : arch.replace("-store", "-apm");
+
   const download: DownloadItem = {
     id: downloadIdCounter,
     name: app.name,
     pkgname: app.pkgname,
     version: app.version,
-    icon: `${APM_STORE_BASE_URL}/${window.apm_store.arch}/${app.category}/${app.pkgname}/icon.png`,
+    icon: `${APM_STORE_BASE_URL}/${finalArch}/${app.category}/${app.pkgname}/icon.png`,
     status: "queued",
     progress: 0,
     downloadedSize: 0,
@@ -114,6 +127,7 @@ export const handleUpgrade = (app: App) => {
     source: "APM Update",
     retry: false,
     upgradeOnly: true,
+    origin: app.origin,
   };
 
   downloads.value.push(download);
@@ -122,7 +136,10 @@ export const handleUpgrade = (app: App) => {
 
 export const handleRemove = () => {
   if (!currentApp.value?.pkgname) return;
-  window.ipcRenderer.send("remove-installed", currentApp.value.pkgname);
+  window.ipcRenderer.send("remove-installed", {
+    pkgname: currentApp.value.pkgname,
+    origin: currentApp.value.origin,
+  });
 };
 
 window.ipcRenderer.on("remove-complete", (_event, log: DownloadResult) => {
