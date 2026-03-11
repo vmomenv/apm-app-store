@@ -36,12 +36,19 @@
                 <p class="text-2xl font-bold text-slate-900 dark:text-white">
                   {{ displayApp?.name || "" }}
                 </p>
-                <div v-if="app?.isMerged" class="flex gap-1 overflow-hidden rounded-md shadow-sm border border-slate-200 dark:border-slate-700 font-medium ml-1">
+                <div
+                  v-if="app?.isMerged"
+                  class="flex gap-1 overflow-hidden rounded-md shadow-sm border border-slate-200 dark:border-slate-700 font-medium ml-1"
+                >
                   <button
                     v-if="app.sparkApp"
                     type="button"
                     class="px-2 py-0.5 text-[10px] uppercase tracking-wider transition-colors"
-                    :class="viewingOrigin === 'spark' ? 'bg-orange-500 text-white' : 'bg-slate-100/50 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                    :class="
+                      viewingOrigin === 'spark'
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-slate-100/50 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    "
                     @click="viewingOrigin = 'spark'"
                   >
                     Spark
@@ -50,7 +57,11 @@
                     v-if="app.apmApp"
                     type="button"
                     class="px-2 py-0.5 text-[10px] uppercase tracking-wider transition-colors"
-                    :class="viewingOrigin === 'apm' ? 'bg-blue-500 text-white' : 'bg-slate-100/50 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                    :class="
+                      viewingOrigin === 'apm'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-slate-100/50 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    "
                     @click="viewingOrigin = 'apm'"
                   >
                     APM
@@ -69,7 +80,8 @@
                 </span>
               </div>
               <p class="text-sm text-slate-500 dark:text-slate-400">
-                {{ displayApp?.pkgname || "" }} · {{ displayApp?.version || "" }}
+                {{ displayApp?.pkgname || "" }} ·
+                {{ displayApp?.version || "" }}
                 <span v-if="downloadCount"> · 下载量：{{ downloadCount }}</span>
               </p>
             </div>
@@ -219,7 +231,10 @@
           </div>
         </div>
 
-        <div v-if="displayApp?.more && displayApp.more.trim() !== ''" class="mt-6 space-y-3">
+        <div
+          v-if="displayApp?.more && displayApp.more.trim() !== ''"
+          class="mt-6 space-y-3"
+        >
           <h3 class="text-lg font-semibold text-slate-900 dark:text-white">
             应用详情
           </h3>

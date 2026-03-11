@@ -11,11 +11,6 @@ export const APM_STORE_STATS_BASE_URL: string =
 export const currentApp = ref<App | null>(null);
 export const currentAppIsInstalled = ref(false);
 
-const initialMode = (localStorage.getItem("store_mode") as StoreMode) || "hybrid";
+const initialMode =
+  (localStorage.getItem("store_mode") as StoreMode) || "hybrid";
 export const currentStoreMode = ref<StoreMode>(initialMode);
-
-declare global {
-  interface Window {
-    apm_store: any;
-  }
-}

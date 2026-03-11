@@ -138,3 +138,26 @@ export type ChannelPayload = {
   message: string;
   [k: string]: unknown;
 };
+
+export interface CategoryInfo {
+  zh: string;
+  origins?: string[];
+  origin?: "spark" | "apm";
+  [k: string]: unknown;
+}
+
+export interface HomeLink {
+  name: string;
+  url: string;
+  icon: string;
+  more?: string;
+  imgUrl?: string;
+  type?: string;
+  origin?: "spark" | "apm";
+  [k: string]: unknown;
+}
+
+export interface HomeList {
+  title: string;
+  apps: App[];
+}

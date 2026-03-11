@@ -163,7 +163,6 @@ import {
   handleInstall,
   handleRetry,
   handleUpgrade,
-  handleRemove,
 } from "./modules/processInstall";
 import type {
   App,
@@ -171,6 +170,9 @@ import type {
   DownloadItem,
   UpdateAppItem,
   ChannelPayload,
+  CategoryInfo,
+  HomeLink,
+  HomeList,
 } from "./global/typedefinition";
 import type { Ref } from "vue";
 import type { IpcRendererEvent } from "electron";
@@ -211,7 +213,7 @@ const isDarkTheme = computed(() => {
   return themeMode.value === "dark";
 });
 
-const categories: Ref<Record<string, any>> = ref({});
+const categories: Ref<Record<string, CategoryInfo>> = ref({});
 const apps: Ref<App[]> = ref([]);
 const activeCategory = ref("home");
 const searchQuery = ref("");
@@ -237,12 +239,17 @@ const showUninstallModal = ref(false);
 const uninstallTargetApp: Ref<App | null> = ref(null);
 
 // 缓存不同模式的数据
-const storeCache = ref<Record<string, {
-  apps: App[];
-  categories: Record<string, any>;
-  homeLinks: any[];
-  homeLists: any[];
-}>>({});
+const storeCache = ref<
+  Record<
+    string,
+    {
+      apps: App[];
+      categories: Record<string, CategoryInfo>;
+      homeLinks: HomeLink[];
+      homeLists: HomeList[];
+    }
+  >
+>({});
 
 const saveToCache = (mode: string) => {
   storeCache.value[mode] = {
@@ -270,14 +277,14 @@ watch(currentStoreMode, async (newMode, oldMode) => {
   if (oldMode) {
     saveToCache(oldMode);
   }
-  
+
   if (!restoreFromCache(newMode)) {
     // 如果没有缓存，清空当前状态并重新加载
     apps.value = [];
     categories.value = {};
     homeLinks.value = [];
     homeLists.value = [];
-    
+
     loading.value = true;
     await loadCategories();
     await Promise.all([
@@ -392,45 +399,51 @@ const selectCategory = (category: string) => {
   activeCategory.value = category;
   searchQuery.value = "";
   isSidebarOpen.value = false;
-  if (category === "home" && homeLinks.value.length === 0 && homeLists.value.length === 0) {
+  if (
+    category === "home" &&
+    homeLinks.value.length === 0 &&
+    homeLists.value.length === 0
+  ) {
     loadHome();
   }
 };
 
 const openDetail = (app: App | Record<string, unknown>) => {
   // 提取 pkgname（必须存在）
-  const pkgname = (app as any).pkgname;
+  const pkgname = (app as Record<string, unknown>).pkgname as string;
   if (!pkgname) {
-    console.warn('openDetail: 缺少 pkgname', app);
+    console.warn("openDetail: 缺少 pkgname", app);
     return;
   }
 
   // 首先尝试从当前已经处理好（合并/筛选）的 filteredApps 中查找，以便获取 isMerged 状态等
-  let fullApp = filteredApps.value.find(a => a.pkgname === pkgname);
+  let fullApp = filteredApps.value.find((a) => a.pkgname === pkgname);
   // 如果没找到（可能是从已安装列表之类的其他入口打开的），回退到全局 apps 中查找完整 App
   if (!fullApp) {
-    fullApp = apps.value.find(a => a.pkgname === pkgname);
+    fullApp = apps.value.find((a) => a.pkgname === pkgname);
   }
   if (!fullApp) {
     // 构造一个最小可用的 App 对象
     fullApp = {
-      name: (app as any).name || '',
+      name: ((app as Record<string, unknown>).name as string) || "",
       pkgname: pkgname,
-      version: (app as any).version || '',
-      filename: (app as any).filename || '',
-      category: (app as any).category || 'unknown',
-      torrent_address: '',
-      author: '',
-      contributor: '',
-      website: '',
-      update: '',
-      size: '',
-      more: (app as any).more || '',
-      tags: '',
+      version: ((app as Record<string, unknown>).version as string) || "",
+      filename: ((app as Record<string, unknown>).filename as string) || "",
+      category:
+        ((app as Record<string, unknown>).category as string) || "unknown",
+      torrent_address: "",
+      author: "",
+      contributor: "",
+      website: "",
+      update: "",
+      size: "",
+      more: ((app as Record<string, unknown>).more as string) || "",
+      tags: "",
       img_urls: [],
-      icons: '',
-      origin: (app as any).origin || 'apm',
-      currentStatus: 'not-installed',
+      icons: "",
+      origin:
+        ((app as Record<string, unknown>).origin as "spark" | "apm") || "apm",
+      currentStatus: "not-installed",
     } as App;
   }
 
@@ -487,10 +500,8 @@ const closeScreenPreview = () => {
 };
 
 // Home data
-const homeLinks = ref<Record<string, unknown>[]>([]);
-const homeLists = ref<
-  Array<{ title: string; apps: Record<string, unknown>[] }>
->([]);
+const homeLinks = ref<HomeLink[]>([]);
+const homeLists = ref<HomeList[]>([]);
 const homeLoading = ref(false);
 const homeError = ref("");
 
@@ -517,7 +528,10 @@ const loadHome = async () => {
         const res = await fetch(cacheBuster(`${base}/homelinks.json`));
         if (res.ok) {
           const links = await res.json();
-          const taggedLinks = links.map((l: any) => ({ ...l, origin: mode }));
+          const taggedLinks = links.map((l: HomeLink) => ({
+            ...l,
+            origin: mode,
+          }));
           homeLinks.value.push(...taggedLinks);
         }
       } catch (e) {
@@ -538,7 +552,7 @@ const loadHome = async () => {
                   const appsJson = await r.json();
                   const rawApps = appsJson || [];
                   const apps = await Promise.all(
-                    rawApps.map(async (a: any) => {
+                    rawApps.map(async (a: Record<string, string>) => {
                       const baseApp = {
                         name: a.Name || a.name || a.Pkgname || a.PkgName || "",
                         pkgname: a.Pkgname || a.pkgname || "",
@@ -648,18 +662,20 @@ const refreshUpgradableApps = async () => {
       return;
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    upgradableApps.value = (result.apps || []).map((app: any) => ({
-      ...app,
-      // Map properties if needed or assume main matches App interface except field names might differ
-      // For now assuming result.apps returns objects compatible with App for core fields,
-      // but let's normalize just in case if main returns different structure.
-      name: app.name || app.Name || "",
-      pkgname: app.pkgname || app.Pkgname || "",
-      version: app.newVersion || app.version || "",
-      category: app.category || "unknown",
-      selected: false,
-      upgrading: false,
-    }));
+    upgradableApps.value = (result.apps || []).map(
+      (app: Record<string, string>) => ({
+        ...app,
+        // Map properties if needed or assume main matches App interface except field names might differ
+        // For now assuming result.apps returns objects compatible with App for core fields,
+        // but let's normalize just in case if main returns different structure.
+        name: app.name || app.Name || "",
+        pkgname: app.pkgname || app.Pkgname || "",
+        version: app.newVersion || app.version || "",
+        category: app.category || "unknown",
+        selected: false,
+        upgrading: false,
+      }),
+    );
   } catch (error: unknown) {
     upgradableApps.value = [];
     updateError.value = (error as Error)?.message || "检查更新失败";
@@ -778,21 +794,9 @@ const refreshInstalledApps = async () => {
 };
 
 const requestUninstall = (app: App) => {
-  let target = null;
-  target = apps.value.find((a) => a.pkgname === app.pkgname) || app;
-
-  if (target) {
-    uninstallTargetApp.value = target as App;
-    showUninstallModal.value = true;
-    // TODO: 挪到卸载完成ipc回调里面
-    removeDownloadItem(app.pkgname);
-  }
-};
-
-const requestUninstallFromDetail = () => {
-  if (currentApp.value) {
-    requestUninstall(currentApp.value);
-  }
+  uninstallTargetApp.value = app;
+  showUninstallModal.value = true;
+  removeDownloadItem(app.pkgname);
 };
 
 const onDetailRemove = (app: App) => {
@@ -820,7 +824,11 @@ const onUninstallSuccess = () => {
 };
 
 const installCompleteCallback = (pkgname?: string, status?: string) => {
-  if (currentApp.value && (!pkgname || currentApp.value.pkgname === pkgname) && status === "completed") {
+  if (
+    currentApp.value &&
+    (!pkgname || currentApp.value.pkgname === pkgname) &&
+    status === "completed"
+  ) {
     checkAppInstalled(currentApp.value);
   }
 };
@@ -926,8 +934,11 @@ const loadCategories = async () => {
         mode === "spark"
           ? arch.replace("-apm", "-store")
           : arch.replace("-store", "-apm");
-      const path = mode === "spark" ? "/store/categories.json" : `/${finalArch}/categories.json`;
-      
+      const path =
+        mode === "spark"
+          ? "/store/categories.json"
+          : `/${finalArch}/categories.json`;
+
       try {
         const response = await axiosInstance.get(cacheBuster(path));
         const data = response.data;
@@ -965,7 +976,9 @@ const loadApps = async (onFirstBatch?: () => void) => {
     await Promise.all(
       categoriesList.map(async (category) => {
         const catInfo = categories.value[category];
-        const origins: string[] = catInfo.origins || (catInfo.origin ? [catInfo.origin] : []);
+        if (!catInfo) return;
+        const origins = (catInfo.origins ||
+          (catInfo.origin ? [catInfo.origin] : [])) as string[];
 
         await Promise.all(
           origins.map(async (mode) => {
@@ -1000,7 +1013,7 @@ const loadApps = async (onFirstBatch?: () => void) => {
                 tags: appJson.Tags,
                 img_urls:
                   typeof appJson.img_urls === "string"
-                    ? JSON.parse(appJson.img_urls)
+                    ? (JSON.parse(appJson.img_urls) as string[])
                     : appJson.img_urls,
                 icons: appJson.icons,
                 category: category,
@@ -1017,9 +1030,11 @@ const loadApps = async (onFirstBatch?: () => void) => {
                 onFirstBatch();
               }
             } catch (error) {
-              logger.warn(`加载分类 ${category} 来源 ${mode} 最终失败: ${error}`);
+              logger.warn(
+                `加载分类 ${category} 来源 ${mode} 最终失败: ${error}`,
+              );
             }
-          })
+          }),
         );
       }),
     );

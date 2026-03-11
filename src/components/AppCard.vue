@@ -33,7 +33,13 @@
                 : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
           ]"
         >
-          {{ app.isMerged ? "Spark/APM" : app.origin === "spark" ? "Spark" : "APM" }}
+          {{
+            app.isMerged
+              ? "Spark/APM"
+              : app.origin === "spark"
+                ? "Spark"
+                : "APM"
+          }}
         </span>
       </div>
       <div class="text-sm text-slate-500 dark:text-slate-400">

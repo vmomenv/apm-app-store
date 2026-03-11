@@ -12,7 +12,7 @@
           :href="link.type === '_blank' ? undefined : link.url"
           @click.prevent="onLinkClick(link)"
           class="flex flex-col items-start gap-2 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm hover:shadow-lg transition"
-          :title="link.more"
+          :title="link.more as string"
         >
           <img
             :src="computedImgUrl(link)"
@@ -50,19 +50,20 @@
 <script setup lang="ts">
 import AppCard from "./AppCard.vue";
 import { APM_STORE_BASE_URL } from "../global/storeConfig";
+import type { HomeLink, HomeList, App } from "../global/typedefinition";
 
 defineProps<{
-  links: Array<any>;
-  lists: Array<{ title: string; apps: any[] }>;
+  links: HomeLink[];
+  lists: HomeList[];
   loading: boolean;
   error: string;
 }>();
 
 defineEmits<{
-  (e: "open-detail", app: any): void;
+  (e: "open-detail", app: App | Record<string, unknown>): void;
 }>();
 
-const computedImgUrl = (link: Record<string, any>) => {
+const computedImgUrl = (link: HomeLink) => {
   if (!link.imgUrl) return "";
   const arch = window.apm_store.arch || "amd64-apm";
   const finalArch =
@@ -72,7 +73,7 @@ const computedImgUrl = (link: Record<string, any>) => {
   return `${APM_STORE_BASE_URL}/${finalArch}${link.imgUrl}`;
 };
 
-const onLinkClick = (link: any) => {
+const onLinkClick = (link: HomeLink) => {
   if (link.type === "_blank") {
     window.open(link.url, "_blank");
   } else {

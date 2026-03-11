@@ -138,8 +138,12 @@ const parseUpgradableList = (output: string) => {
 
 // Listen for download requests from renderer process
 ipcMain.on("queue-install", async (event, download_json) => {
-  const download = typeof download_json === "string" ? JSON.parse(download_json) : download_json;
-  const { id, pkgname, metalinkUrl, filename, upgradeOnly, origin } = download || {};
+  const download =
+    typeof download_json === "string"
+      ? JSON.parse(download_json)
+      : download_json;
+  const { id, pkgname, metalinkUrl, filename, upgradeOnly, origin } =
+    download || {};
 
   if (!id || !pkgname) {
     logger.warn("passed arguments missing id or pkgname");
@@ -181,7 +185,11 @@ ipcMain.on("queue-install", async (event, download_json) => {
       if (superUserCmd) execParams.push(SHELL_CALLER_PATH);
 
       if (metalinkUrl && filename) {
-        execParams.push("ssinstall", `${downloadDir}/${filename}`, "--delete-after-install");
+        execParams.push(
+          "ssinstall",
+          `${downloadDir}/${filename}`,
+          "--delete-after-install",
+        );
       } else {
         execParams.push("aptss", "install", "-y", pkgname);
       }
@@ -189,7 +197,7 @@ ipcMain.on("queue-install", async (event, download_json) => {
   } else {
     // APM Store logic
     execCommand = "apm"; // apm handles its own sudo if needed or we use pkexec wrap if required
-    // Actually, usually apm is called directly and it might prompt. 
+    // Actually, usually apm is called directly and it might prompt.
     // Let's stick to the pattern of using SHELL_CALLER_PATH if possible or follow apm-app-store demo.
 
     if (metalinkUrl && filename) {
