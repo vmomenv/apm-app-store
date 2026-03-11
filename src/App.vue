@@ -210,7 +210,7 @@ const isDarkTheme = computed(() => {
   return themeMode.value === "dark";
 });
 
-const categories: Ref<Record<string, string>> = ref({});
+const categories: Ref<Record<string, any>> = ref({});
 const apps: Ref<App[]> = ref([]);
 const activeCategory = ref("home");
 const searchQuery = ref("");
@@ -403,8 +403,9 @@ const openDetail = (app: App | Record<string, unknown>) => {
       tags: '',
       img_urls: [],
       icons: '',
+      origin: (app as any).origin || 'apm',
       currentStatus: 'not-installed',
-    };
+    } as App;
   }
 
   // 后续逻辑使用 fullApp
@@ -884,7 +885,7 @@ const loadCategories = async () => {
     if (currentStoreMode.value === "hybrid") modes.push("spark", "apm");
     else modes.push(currentStoreMode.value as "spark" | "apm");
 
-    const categoryData: Record<string, { zh: string; origin: string }> = {};
+    const categoryData: Record<string, { zh: string; origins: string[] }> = {};
 
     for (const mode of modes) {
       const finalArch =
@@ -897,10 +898,16 @@ const loadCategories = async () => {
         const response = await axiosInstance.get(cacheBuster(path));
         const data = response.data;
         Object.keys(data).forEach((key) => {
-          categoryData[key] = {
-            zh: data[key].zh || data[key],
-            origin: mode,
-          };
+          if (categoryData[key]) {
+            if (!categoryData[key].origins.includes(mode)) {
+              categoryData[key].origins.push(mode);
+            }
+          } else {
+            categoryData[key] = {
+              zh: data[key].zh || data[key],
+              origins: [mode],
+            };
+          }
         });
       } catch (e) {
         logger.error(`读取 ${mode} categories.json 失败: ${e}`);
@@ -923,58 +930,63 @@ const loadApps = async (onFirstBatch?: () => void) => {
     // 并发加载所有分类，每个分类自带重试机制
     await Promise.all(
       categoriesList.map(async (category) => {
-        try {
-          const catInfo = categories.value[category];
-          const mode = catInfo.origin;
-          const finalArch =
-            mode === "spark"
-              ? arch.replace("-apm", "-store")
-              : arch.replace("-store", "-apm");
+        const catInfo = categories.value[category];
+        const origins: string[] = catInfo.origins || (catInfo.origin ? [catInfo.origin] : []);
 
-          const path =
-            mode === "spark"
-              ? `/store/${category}/applist.json`
-              : `/${finalArch}/${category}/applist.json`;
+        await Promise.all(
+          origins.map(async (mode) => {
+            try {
+              const finalArch =
+                mode === "spark"
+                  ? arch.replace("-apm", "-store")
+                  : arch.replace("-store", "-apm");
 
-          logger.info(`加载分类: ${category} (来源: ${mode})`);
-          const categoryApps = await fetchWithRetry<AppJson[]>(
-            cacheBuster(path),
-          );
+              const path =
+                mode === "spark"
+                  ? `/store/${category}/applist.json`
+                  : `/${finalArch}/${category}/applist.json`;
 
-          const normalizedApps = (categoryApps || []).map((appJson) => ({
-            name: appJson.Name,
-            pkgname: appJson.Pkgname,
-            version: appJson.Version,
-            filename: appJson.Filename,
-            torrent_address: appJson.Torrent_address,
-            author: appJson.Author,
-            contributor: appJson.Contributor,
-            website: appJson.Website,
-            update: appJson.Update,
-            size: appJson.Size,
-            more: appJson.More,
-            tags: appJson.Tags,
-            img_urls:
-              typeof appJson.img_urls === "string"
-                ? JSON.parse(appJson.img_urls)
-                : appJson.img_urls,
-            icons: appJson.icons,
-            category: category,
-            origin: mode as "spark" | "apm",
-            currentStatus: "not-installed" as const,
-          }));
+              logger.info(`加载分类: ${category} (来源: ${mode})`);
+              const categoryApps = await fetchWithRetry<AppJson[]>(
+                cacheBuster(path),
+              );
 
-          // 增量式更新，让用户尽快看到部分数据
-          apps.value.push(...normalizedApps);
+              const normalizedApps = (categoryApps || []).map((appJson) => ({
+                name: appJson.Name,
+                pkgname: appJson.Pkgname,
+                version: appJson.Version,
+                filename: appJson.Filename,
+                torrent_address: appJson.Torrent_address,
+                author: appJson.Author,
+                contributor: appJson.Contributor,
+                website: appJson.Website,
+                update: appJson.Update,
+                size: appJson.Size,
+                more: appJson.More,
+                tags: appJson.Tags,
+                img_urls:
+                  typeof appJson.img_urls === "string"
+                    ? JSON.parse(appJson.img_urls)
+                    : appJson.img_urls,
+                icons: appJson.icons,
+                category: category,
+                origin: mode as "spark" | "apm",
+                currentStatus: "not-installed" as const,
+              }));
 
-          // 只要有一个分类加载成功，就可以考虑关闭整体 loading（如果是首批逻辑）
-          if (!firstBatchCallDone && typeof onFirstBatch === "function") {
-            firstBatchCallDone = true;
-            onFirstBatch();
-          }
-        } catch (error) {
-          logger.warn(`加载分类 ${category} 最终失败: ${error}`);
-        }
+              // 增量式更新，让用户尽快看到部分数据
+              apps.value.push(...normalizedApps);
+
+              // 只要有一个分类加载成功，就可以考虑关闭整体 loading（如果是首批逻辑）
+              if (!firstBatchCallDone && typeof onFirstBatch === "function") {
+                firstBatchCallDone = true;
+                onFirstBatch();
+              }
+            } catch (error) {
+              logger.warn(`加载分类 ${category} 来源 ${mode} 最终失败: ${error}`);
+            }
+          })
+        );
       }),
     );
 
