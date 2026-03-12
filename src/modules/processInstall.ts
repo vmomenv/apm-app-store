@@ -31,11 +31,9 @@ export const handleInstall = (appObj?: App) => {
 
   downloadIdCounter += 1;
   // 创建下载任务
-  const arch = window.apm_store.arch || "amd64-apm";
+  const arch = window.apm_store.arch || "amd64";
   const finalArch =
-    targetApp.origin === "spark"
-      ? arch.replace("-apm", "-store")
-      : arch.replace("-store", "-apm");
+    targetApp.origin === "spark" ? `${arch}-store` : `${arch}-apm`;
 
   const download: DownloadItem = {
     id: downloadIdCounter,
@@ -55,7 +53,7 @@ export const handleInstall = (appObj?: App) => {
     source: "APM Store",
     retry: false,
     filename: targetApp.filename,
-    metalinkUrl: `${window.apm_store.arch}/${targetApp.category}/${targetApp.pkgname}/${targetApp.filename}.metalink`,
+    metalinkUrl: `${finalArch}/${targetApp.category}/${targetApp.pkgname}/${targetApp.filename}.metalink`,
   };
 
   downloads.value.push(download);
@@ -73,7 +71,7 @@ export const handleInstall = (appObj?: App) => {
     .post(
       "/handle_post",
       {
-        path: `${window.apm_store.arch}/${targetApp.category}/${targetApp.pkgname}`,
+        path: `${finalArch}/${targetApp.category}/${targetApp.pkgname}`,
       },
       {
         headers: {
@@ -102,11 +100,8 @@ export const handleUpgrade = (app: App) => {
   }
 
   downloadIdCounter += 1;
-  const arch = window.apm_store.arch || "amd64-apm";
-  const finalArch =
-    app.origin === "spark"
-      ? arch.replace("-apm", "-store")
-      : arch.replace("-store", "-apm");
+  const arch = window.apm_store.arch || "amd64";
+  const finalArch = app.origin === "spark" ? `${arch}-store` : `${arch}-apm`;
 
   const download: DownloadItem = {
     id: downloadIdCounter,

@@ -72,11 +72,9 @@ const loadedIcon = ref(
 );
 
 const iconPath = computed(() => {
-  const arch = window.apm_store.arch || "amd64-apm";
+  const arch = window.apm_store.arch || "amd64";
   const finalArch =
-    props.app.origin === "spark"
-      ? arch.replace("-apm", "-store")
-      : arch.replace("-store", "-apm");
+    props.app.origin === "spark" ? `${arch}-store` : `${arch}-apm`;
   return `${APM_STORE_BASE_URL}/${finalArch}/${props.app.category}/${props.app.pkgname}/icon.png`;
 });
 

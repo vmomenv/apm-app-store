@@ -239,67 +239,6 @@ const updateError = ref("");
 const showUninstallModal = ref(false);
 const uninstallTargetApp: Ref<App | null> = ref(null);
 
-// 缓存不同模式的数据
-const storeCache = ref<
-  Record<
-    string,
-    {
-      apps: App[];
-      categories: Record<string, CategoryInfo>;
-      homeLinks: HomeLink[];
-      homeLists: HomeList[];
-    }
-  >
->({});
-
-const saveToCache = (mode: string) => {
-  storeCache.value[mode] = {
-    apps: [...apps.value],
-    categories: { ...categories.value },
-    homeLinks: [...homeLinks.value],
-    homeLists: [...homeLists.value],
-  };
-};
-
-const restoreFromCache = (mode: string) => {
-  const cache = storeCache.value[mode];
-  if (cache) {
-    apps.value = [...cache.apps];
-    categories.value = { ...cache.categories };
-    homeLinks.value = [...cache.homeLinks];
-    homeLists.value = [...cache.homeLists];
-    return true;
-  }
-  return false;
-};
-
-// 监听模式变化
-watch(currentStoreMode, async (newMode, oldMode) => {
-  if (oldMode) {
-    saveToCache(oldMode);
-  }
-
-  if (!restoreFromCache(newMode)) {
-    // 如果没有缓存，清空当前状态并重新加载
-    apps.value = [];
-    categories.value = {};
-    homeLinks.value = [];
-    homeLists.value = [];
-
-    loading.value = true;
-    await loadCategories();
-    await Promise.all([
-      loadHome(),
-      new Promise<void>((resolve) => {
-        loadApps(() => {
-          loading.value = false;
-          resolve();
-        });
-      }),
-    ]);
-  }
-});
-
 // 计算属性
 const filteredApps = computed(() => {
   let result = [...apps.value];
@@ -475,11 +414,8 @@ const checkAppInstalled = (app: App) => {
 
 const loadScreenshots = (app: App) => {
   screenshots.value = [];
-  const arch = window.apm_store.arch || "amd64-apm";
-  const finalArch =
-    app.origin === "spark"
-      ? arch.replace("-apm", "-store")
-      : arch.replace("-store", "-apm");
+  const arch = window.apm_store.arch || "amd64";
+  const finalArch = app.origin === "spark" ? `${arch}-store` : `${arch}-apm`;
   for (let i = 1; i <= 5; i++) {
     const screenshotUrl = `${APM_STORE_BASE_URL}/${finalArch}/${app.category}/${app.pkgname}/screen_${i}.png`;
     screenshots.value.push(screenshotUrl);
@@ -512,16 +448,11 @@ const loadHome = async () => {
   homeLinks.value = [];
   homeLists.value = [];
   try {
-    const arch = window.apm_store.arch || "amd64-apm";
-    const modes: Array<"spark" | "apm"> = [];
-    if (currentStoreMode.value === "hybrid") modes.push("spark", "apm");
-    else modes.push(currentStoreMode.value as "spark" | "apm");
+    const arch = window.apm_store.arch || "amd64";
+    const modes: Array<"spark" | "apm"> = ["spark", "apm"]; // 只保留混合模式
 
     for (const mode of modes) {
-      const finalArch =
-        mode === "spark"
-          ? arch.replace("-apm", "-store")
-          : arch.replace("-store", "-apm");
+      const finalArch = mode === "spark" ? `${arch}-store` : `${arch}-apm`;
       const base = `${APM_STORE_BASE_URL}/${finalArch}/home`;
 
       // homelinks.json
@@ -662,7 +593,7 @@ const refreshUpgradableApps = async () => {
       updateError.value = result?.message || "检查更新失败";
       return;
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     upgradableApps.value = (result.apps || []).map(
       (app: Record<string, string>) => ({
         ...app,
@@ -923,18 +854,13 @@ const openDownloadedApp = (pkgname: string, origin?: "spark" | "apm") => {
 
 const loadCategories = async () => {
   try {
-    const arch = window.apm_store.arch || "amd64-apm";
-    const modes: Array<"spark" | "apm"> = [];
-    if (currentStoreMode.value === "hybrid") modes.push("spark", "apm");
-    else modes.push(currentStoreMode.value as "spark" | "apm");
+    const arch = window.apm_store.arch || "amd64";
+    const modes: Array<"spark" | "apm"> = ["spark", "apm"];
 
     const categoryData: Record<string, { zh: string; origins: string[] }> = {};
 
     for (const mode of modes) {
-      const finalArch =
-        mode === "spark"
-          ? arch.replace("-apm", "-store")
-          : arch.replace("-store", "-apm");
+      const finalArch = mode === "spark" ? `${arch}-store` : `${arch}-apm`;
       const path =
         mode === "spark"
           ? "/store/categories.json"
@@ -971,7 +897,7 @@ const loadApps = async (onFirstBatch?: () => void) => {
 
     const categoriesList = Object.keys(categories.value || {});
     let firstBatchCallDone = false;
-    const arch = window.apm_store.arch || "amd64-apm";
+    const arch = window.apm_store.arch || "amd64";
 
     // 并发加载所有分类，每个分类自带重试机制
     await Promise.all(
@@ -985,9 +911,7 @@ const loadApps = async (onFirstBatch?: () => void) => {
           origins.map(async (mode) => {
             try {
               const finalArch =
-                mode === "spark"
-                  ? arch.replace("-apm", "-store")
-                  : arch.replace("-store", "-apm");
+                mode === "spark" ? `${arch}-store` : `${arch}-apm`;
 
               const path =
                 mode === "spark"

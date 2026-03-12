@@ -428,14 +428,23 @@ ipcMain.handle("check-installed", async (_event, payload: any) => {
   let isInstalled = false;
 
   if (origin === "apm") {
-    const { code, stdout } = await runCommandCapture("apm", ["list", "--installed"]);
+    const { code, stdout } = await runCommandCapture("apm", [
+      "list",
+      "--installed",
+    ]);
     if (code === 0) {
       // eslint-disable-next-line no-control-regex
       const cleanStdout = stdout.replace(/\x1b\[[0-9;]*m/g, "");
       const lines = cleanStdout.split("\n");
       for (const line of lines) {
         const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith("Listing") || trimmed.startsWith("[INFO]") || trimmed.startsWith("警告")) continue;
+        if (
+          !trimmed ||
+          trimmed.startsWith("Listing") ||
+          trimmed.startsWith("[INFO]") ||
+          trimmed.startsWith("警告")
+        )
+          continue;
         if (trimmed.includes("/")) {
           const installedPkg = trimmed.split("/")[0].trim();
           if (installedPkg === pkgname) {

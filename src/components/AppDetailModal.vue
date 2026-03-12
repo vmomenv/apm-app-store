@@ -109,7 +109,13 @@
               <button
                 type="button"
                 class="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-brand to-brand-dark px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5"
-                @click="emit('open-app', displayApp?.pkgname || '', displayApp?.origin)"
+                @click="
+                  emit(
+                    'open-app',
+                    displayApp?.pkgname || '',
+                    displayApp?.origin,
+                  )
+                "
               >
                 <i class="fas fa-external-link-alt"></i>
                 <span>打开</span>
@@ -343,11 +349,9 @@ const installBtnText = computed(() => {
 });
 const iconPath = computed(() => {
   if (!displayApp.value) return "";
-  const arch = window.apm_store.arch || "amd64-apm";
+  const arch = window.apm_store.arch || "amd64";
   const finalArch =
-    displayApp.value.origin === "spark"
-      ? arch.replace("-apm", "-store")
-      : arch.replace("-store", "-apm");
+    displayApp.value.origin === "spark" ? `${arch}-store` : `${arch}-apm`;
   return `${APM_STORE_BASE_URL}/${finalArch}/${displayApp.value.category}/${displayApp.value.pkgname}/icon.png`;
 });
 
@@ -360,11 +364,9 @@ watch(
     if (newApp) {
       downloadCount.value = "";
       try {
-        const arch = window.apm_store.arch || "amd64-apm";
+        const arch = window.apm_store.arch || "amd64";
         const finalArch =
-          newApp.origin === "spark"
-            ? arch.replace("-apm", "-store")
-            : arch.replace("-store", "-apm");
+          newApp.origin === "spark" ? `${arch}-store` : `${arch}-apm`;
         const url = `${APM_STORE_BASE_URL}/${finalArch}/${newApp.category}/${newApp.pkgname}/download-times.txt`;
         const resp = await axios.get(url, { responseType: "text" });
         if (resp.status === 200) {
