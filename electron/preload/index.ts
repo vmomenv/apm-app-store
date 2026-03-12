@@ -29,9 +29,11 @@ contextBridge.exposeInMainWorld("apm_store", {
   arch: (() => {
     const arch = process.arch;
     if (arch === "x64") {
-      return "amd64" + "-store";
+      return "amd64";
+    } else if (arch === "arm64") {
+      return "arm64";
     } else {
-      return arch + "-store";
+      return arch;
     }
   })(),
 });

@@ -89,7 +89,6 @@
 
 <script setup lang="ts">
 import ThemeToggle from "./ThemeToggle.vue";
-import StoreModeSwitcher from "./StoreModeSwitcher.vue";
 import amberLogo from "../assets/imgs/spark-store.svg";
 
 defineProps<{

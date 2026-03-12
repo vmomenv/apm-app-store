@@ -65,11 +65,8 @@ defineEmits<{
 
 const computedImgUrl = (link: HomeLink) => {
   if (!link.imgUrl) return "";
-  const arch = window.apm_store.arch || "amd64-apm";
-  const finalArch =
-    link.origin === "spark"
-      ? arch.replace("-apm", "-store")
-      : arch.replace("-store", "-apm");
+  const arch = window.apm_store.arch || "amd64";
+  const finalArch = link.origin === "spark" ? `${arch}-store` : `${arch}-apm`;
   return `${APM_STORE_BASE_URL}/${finalArch}${link.imgUrl}`;
 };
 
