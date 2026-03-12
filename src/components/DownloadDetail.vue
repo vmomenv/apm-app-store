@@ -116,7 +116,7 @@
             <div class="flex justify-between py-1">
               <span class="text-slate-400">下载源</span>
               <span class="font-medium text-slate-900 dark:text-white">{{
-                download.source || "APM Store"
+                download.origin === "spark" ? "Spark Store" : "APM Store"
               }}</span>
             </div>
             <div v-if="download.startTime" class="flex justify-between py-1">
