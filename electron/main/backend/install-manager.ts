@@ -196,9 +196,11 @@ ipcMain.on("queue-install", async (event, download_json) => {
     }
   } else {
     // APM Store logic
-    execCommand = "apm"; // apm handles its own sudo if needed or we use pkexec wrap if required
-    // Actually, usually apm is called directly and it might prompt.
-    // Let's stick to the pattern of using SHELL_CALLER_PATH if possible or follow apm-app-store demo.
+    execCommand = superUserCmd || SHELL_CALLER_PATH;
+    if (superUserCmd) {
+      execParams.push(SHELL_CALLER_PATH);
+    }
+    execParams.push("apm");
 
     if (metalinkUrl && filename) {
       execParams.push("ssaudit", `${downloadDir}/${filename}`);
@@ -517,14 +519,14 @@ ipcMain.on("remove-installed", async (_event, payload) => {
   let execCommand = "";
   const execParams = [];
 
+  const superUserCmd = await checkSuperUserCommand();
+  execCommand = superUserCmd || SHELL_CALLER_PATH;
+  if (superUserCmd) execParams.push(SHELL_CALLER_PATH);
+
   if (origin === "spark") {
-    const superUserCmd = await checkSuperUserCommand();
-    execCommand = superUserCmd || SHELL_CALLER_PATH;
-    if (superUserCmd) execParams.push(SHELL_CALLER_PATH);
     execParams.push("aptss", "remove", pkgname);
   } else {
-    execCommand = "apm";
-    execParams.push("remove", pkgname);
+    execParams.push("apm", "remove", "-y", pkgname);
   }
 
   const child = spawn(execCommand, execParams, {
@@ -609,19 +611,25 @@ ipcMain.handle("list-installed", async () => {
   return { success: true, apps };
 });
 
-ipcMain.handle("uninstall-installed", async (_event, pkgname: string) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ipcMain.handle("uninstall-installed", async (_event, payload: any) => {
+  const pkgname = typeof payload === "string" ? payload : payload.pkgname;
+  const origin = typeof payload === "string" ? "spark" : payload.origin;
+
   if (!pkgname) {
     logger.warn("uninstall-installed missing pkgname");
     return { success: false, message: "missing pkgname" };
   }
 
   const superUserCmd = await checkSuperUserCommand();
-  const execCommand =
-    superUserCmd.length > 0 ? superUserCmd : SHELL_CALLER_PATH;
-  const execParams =
-    superUserCmd.length > 0
-      ? [SHELL_CALLER_PATH, "aptss", "remove", "-y", pkgname]
-      : ["aptss", "remove", "-y", pkgname];
+  const execCommand = superUserCmd || SHELL_CALLER_PATH;
+  const execParams = superUserCmd ? [SHELL_CALLER_PATH] : [];
+
+  if (origin === "apm") {
+    execParams.push("apm", "remove", "-y", pkgname);
+  } else {
+    execParams.push("aptss", "remove", "-y", pkgname);
+  }
 
   const { code, stdout, stderr } = await runCommandCapture(
     execCommand,
