@@ -9,6 +9,7 @@ export const APM_STORE_STATS_BASE_URL: string =
 
 // 下面的变量用于存储当前应用的信息，其实用在多个组件中
 export const currentApp = ref<App | null>(null);
-export const currentAppIsInstalled = ref(false);
+export const currentAppSparkInstalled = ref(false);
+export const currentAppApmInstalled = ref(false);
 
 export const currentStoreMode = ref<StoreMode>("hybrid");

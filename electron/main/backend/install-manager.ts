@@ -562,6 +562,7 @@ ipcMain.on("remove-installed", async (_event, payload) => {
       time: Date.now(),
       exitCode: code,
       message: JSON.stringify(messageJSONObj),
+      origin: origin,
     } satisfies ChannelPayload);
   });
 });

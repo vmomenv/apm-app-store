@@ -3,7 +3,8 @@ import pino from "pino";
 import {
   APM_STORE_STATS_BASE_URL,
   currentApp,
-  currentAppIsInstalled,
+  currentAppSparkInstalled,
+  currentAppApmInstalled,
 } from "../global/storeConfig";
 import { APM_STORE_BASE_URL } from "../global/storeConfig";
 import { downloads } from "../global/downloadStatus";
@@ -138,9 +139,18 @@ export const handleRemove = (appObj?: App) => {
 
 window.ipcRenderer.on("remove-complete", (_event, log: DownloadResult) => {
   if (log.success) {
-    currentAppIsInstalled.value = false;
+    if (log.origin === "spark") {
+      currentAppSparkInstalled.value = false;
+    } else {
+      currentAppApmInstalled.value = false;
+    }
   } else {
-    currentAppIsInstalled.value = true;
+    // We could potentially restore the value, but if remove failed, it should still be installed.
+    if (log.origin === "spark") {
+      currentAppSparkInstalled.value = true;
+    } else {
+      currentAppApmInstalled.value = true;
+    }
     console.error("卸载失败:", log.message);
   }
 });

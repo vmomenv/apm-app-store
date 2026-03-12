@@ -63,7 +63,8 @@
       :show="showModal"
       :app="currentApp"
       :screenshots="screenshots"
-      :isinstalled="currentAppIsInstalled"
+      :spark-installed="currentAppSparkInstalled"
+      :apm-installed="currentAppApmInstalled"
       @close="closeDetail"
       @install="onDetailInstall"
       @remove="onDetailRemove"
@@ -152,7 +153,8 @@ import UninstallConfirmModal from "./components/UninstallConfirmModal.vue";
 import {
   APM_STORE_BASE_URL,
   currentApp,
-  currentAppIsInstalled,
+  currentAppSparkInstalled,
+  currentAppApmInstalled,
   currentStoreMode,
 } from "./global/storeConfig";
 import {
@@ -393,7 +395,8 @@ const openDetail = (app: App | Record<string, unknown>) => {
   loadScreenshots(fullApp);
   showModal.value = true;
 
-  currentAppIsInstalled.value = false;
+  currentAppSparkInstalled.value = false;
+  currentAppApmInstalled.value = false;
   checkAppInstalled(fullApp);
 
   nextTick(() => {
@@ -405,11 +408,38 @@ const openDetail = (app: App | Record<string, unknown>) => {
 };
 
 const checkAppInstalled = (app: App) => {
-  window.ipcRenderer
-    .invoke("check-installed", { pkgname: app.pkgname, origin: app.origin })
-    .then((isInstalled: boolean) => {
-      currentAppIsInstalled.value = isInstalled;
-    });
+  if (app.isMerged) {
+    if (app.sparkApp) {
+      window.ipcRenderer
+        .invoke("check-installed", {
+          pkgname: app.sparkApp.pkgname,
+          origin: "spark",
+        })
+        .then((isInstalled: boolean) => {
+          currentAppSparkInstalled.value = isInstalled;
+        });
+    }
+    if (app.apmApp) {
+      window.ipcRenderer
+        .invoke("check-installed", {
+          pkgname: app.apmApp.pkgname,
+          origin: "apm",
+        })
+        .then((isInstalled: boolean) => {
+          currentAppApmInstalled.value = isInstalled;
+        });
+    }
+  } else {
+    window.ipcRenderer
+      .invoke("check-installed", { pkgname: app.pkgname, origin: app.origin })
+      .then((isInstalled: boolean) => {
+        if (app.origin === "spark") {
+          currentAppSparkInstalled.value = isInstalled;
+        } else {
+          currentAppApmInstalled.value = isInstalled;
+        }
+      });
+  }
 };
 
 const loadScreenshots = (app: App) => {

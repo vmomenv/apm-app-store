@@ -13,6 +13,7 @@ export interface DownloadResult extends InstallStatus {
   success: boolean;
   exitCode: number | null;
   status: DownloadItemStatus | null;
+  origin?: "spark" | "apm";
 }
 
 export type DownloadItemStatus =
