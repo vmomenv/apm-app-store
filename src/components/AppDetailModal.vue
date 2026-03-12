@@ -97,7 +97,9 @@
                   : 'from-brand to-brand-dark'
               "
               @click="handleInstall"
-              :disabled="installFeedback || isCompleted"
+              :disabled="
+                installFeedback || isCompleted || isOtherVersionInstalled
+              "
             >
               <i
                 class="fas"
@@ -271,7 +273,8 @@ const props = defineProps<{
   show: boolean;
   app: App | null;
   screenshots: string[];
-  isinstalled: boolean;
+  sparkInstalled: boolean;
+  apmInstalled: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -326,14 +329,29 @@ const activeDownload = computed(() => {
   return downloads.value.find((d) => d.pkgname === displayApp.value?.pkgname);
 });
 
+const isinstalled = computed(() => {
+  return viewingOrigin.value === "spark"
+    ? props.sparkInstalled
+    : props.apmInstalled;
+});
+
+const isOtherVersionInstalled = computed(() => {
+  return viewingOrigin.value === "spark"
+    ? props.apmInstalled
+    : props.sparkInstalled;
+});
+
 const { installFeedback } = useInstallFeedback(appPkgname);
 const { isCompleted } = useDownloadItemStatus(appPkgname);
 const installBtnText = computed(() => {
-  if (props.isinstalled) {
+  if (isinstalled.value) {
     return "已安装";
   }
   if (isCompleted.value) {
     return "已安装";
+  }
+  if (isOtherVersionInstalled.value) {
+    return viewingOrigin.value === "spark" ? "已安装apm版" : "已安装spark版";
   }
   if (installFeedback.value) {
     const status = activeDownload.value?.status;
