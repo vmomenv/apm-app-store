@@ -2,11 +2,11 @@ import { test, expect } from "@playwright/test";
 
 test.describe("应用基本功能", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
+    await page.goto("http://127.0.0.1:3344");
   });
 
   test("页面应该正常加载", async ({ page }) => {
-    await expect(page).toHaveTitle(/星火应用商店|APM 应用商店|Spark Store/);
+    await expect(page).toHaveTitle(/APM 应用商店|Spark Store/);
   });
 
   test("应该显示应用列表", async ({ page }) => {
