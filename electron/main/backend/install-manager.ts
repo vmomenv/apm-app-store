@@ -25,6 +25,8 @@ type InstallTask = {
 };
 
 const SHELL_CALLER_PATH = "/opt/spark-store/extras/shell-caller.sh";
+const APM_SHELL_CALLER_PATH =
+  "/opt/apm-store/resources/shell-helper/shell-caller.sh";
 
 export const tasks = new Map<number, InstallTask>();
 
@@ -196,9 +198,9 @@ ipcMain.on("queue-install", async (event, download_json) => {
     }
   } else {
     // APM Store logic
-    execCommand = superUserCmd || SHELL_CALLER_PATH;
+    execCommand = superUserCmd || APM_SHELL_CALLER_PATH;
     if (superUserCmd) {
-      execParams.push(SHELL_CALLER_PATH);
+      execParams.push(APM_SHELL_CALLER_PATH);
     }
     execParams.push("apm");
 
@@ -520,12 +522,14 @@ ipcMain.on("remove-installed", async (_event, payload) => {
   const execParams = [];
 
   const superUserCmd = await checkSuperUserCommand();
-  execCommand = superUserCmd || SHELL_CALLER_PATH;
-  if (superUserCmd) execParams.push(SHELL_CALLER_PATH);
 
   if (origin === "spark") {
+    execCommand = superUserCmd || SHELL_CALLER_PATH;
+    if (superUserCmd) execParams.push(SHELL_CALLER_PATH);
     execParams.push("aptss", "remove", pkgname);
   } else {
+    execCommand = superUserCmd || APM_SHELL_CALLER_PATH;
+    if (superUserCmd) execParams.push(APM_SHELL_CALLER_PATH);
     execParams.push("apm", "remove", "-y", pkgname);
   }
 
@@ -622,12 +626,16 @@ ipcMain.handle("uninstall-installed", async (_event, payload: any) => {
   }
 
   const superUserCmd = await checkSuperUserCommand();
-  const execCommand = superUserCmd || SHELL_CALLER_PATH;
-  const execParams = superUserCmd ? [SHELL_CALLER_PATH] : [];
+  let execCommand = "";
+  const execParams = [];
 
   if (origin === "apm") {
+    execCommand = superUserCmd || APM_SHELL_CALLER_PATH;
+    if (superUserCmd) execParams.push(APM_SHELL_CALLER_PATH);
     execParams.push("apm", "remove", "-y", pkgname);
   } else {
+    execCommand = superUserCmd || SHELL_CALLER_PATH;
+    if (superUserCmd) execParams.push(SHELL_CALLER_PATH);
     execParams.push("aptss", "remove", "-y", pkgname);
   }
 
