@@ -74,6 +74,22 @@ const getUserAgent = (): string => {
 
 logger.info("User Agent: " + getUserAgent());
 
+/** 根据启动参数 --no-apm / --no-spark 决定只展示的来源 */
+function getStoreFilterFromArgv(): "spark" | "apm" | "both" {
+  const argv = process.argv;
+  const noApm = argv.includes("--no-apm");
+  const noSpark = argv.includes("--no-spark");
+  if (noApm && noSpark) return "both";
+  if (noApm) return "spark";
+  if (noSpark) return "apm";
+  return "both";
+}
+
+ipcMain.handle(
+  "get-store-filter",
+  (): "spark" | "apm" | "both" => getStoreFilterFromArgv(),
+);
+
 async function createWindow() {
   win = new BrowserWindow({
     title: "星火应用商店",

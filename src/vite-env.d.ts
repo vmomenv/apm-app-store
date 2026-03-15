@@ -12,7 +12,6 @@ interface Window {
   ipcRenderer: import("electron").IpcRenderer;
   apm_store: {
     arch: string;
-    [k: string]: any;
   };
 }
 

@@ -20,7 +20,6 @@
     }
   ],
   "configurations": [
-    
     {
       "name": "Debug Main Process",
       "type": "node",
@@ -31,6 +30,7 @@
       // },
       "runtimeArgs": [
         "--remote-debugging-port=9229",
+        "--no-spark",
         "."
       ],
       "envFile": "${workspaceFolder}/.vscode/.debug.env",

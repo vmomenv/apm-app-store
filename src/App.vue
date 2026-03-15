@@ -241,6 +241,9 @@ const updateError = ref("");
 const showUninstallModal = ref(false);
 const uninstallTargetApp: Ref<App | null> = ref(null);
 
+/** 启动参数 --no-apm => 仅 Spark；--no-spark => 仅 APM；由主进程 IPC 提供 */
+const storeFilter = ref<"spark" | "apm" | "both">("both");
+
 // 计算属性
 const filteredApps = computed(() => {
   let result = [...apps.value];
@@ -509,7 +512,8 @@ const loadHome = async () => {
   homeLists.value = [];
   try {
     const arch = window.apm_store.arch || "amd64";
-    const modes: Array<"spark" | "apm"> = ["spark", "apm"]; // 只保留混合模式
+    const modes: Array<"spark" | "apm"> =
+      storeFilter.value === "both" ? ["spark", "apm"] : [storeFilter.value];
 
     for (const mode of modes) {
       const finalArch = mode === "spark" ? `${arch}-store` : `${arch}-apm`;
@@ -915,7 +919,8 @@ const openDownloadedApp = (pkgname: string, origin?: "spark" | "apm") => {
 const loadCategories = async () => {
   try {
     const arch = window.apm_store.arch || "amd64";
-    const modes: Array<"spark" | "apm"> = ["spark", "apm"];
+    const modes: Array<"spark" | "apm"> =
+      storeFilter.value === "both" ? ["spark", "apm"] : [storeFilter.value];
 
     const categoryData: Record<string, { zh: string; origins: string[] }> = {};
 
@@ -1039,6 +1044,8 @@ const handleSearchFocus = () => {
 onMounted(async () => {
   initTheme();
 
+  // 从主进程获取启动参数（--no-apm / --no-spark），再加载数据
+  storeFilter.value = await window.ipcRenderer.invoke("get-store-filter");
   await loadCategories();
 
   // 分类目录加载后，并行加载主页数据和所有应用列表
