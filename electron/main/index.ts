@@ -3,6 +3,7 @@ import {
   BrowserWindow,
   ipcMain,
   Menu,
+  nativeImage,
   shell,
   Tray,
   nativeTheme,
@@ -234,36 +235,45 @@ app.on("will-quit", () => {
   logger.info("Done, exiting");
 });
 
-// 设置托盘
-// 获取图标路径
-function getIconPath() {
-  let iconPath = "";
-  const iconName =
-    process.platform === "win32" ? "amber-pm-logo.ico" : "amber-pm-logo.png"; // 图标文件名，linux下需要png格式，不然会不显示
-  // 判断是否在打包模式
-  if (app.isPackaged) {
-    // 打包模式
-    iconPath = path.join(process.resourcesPath, "icons", iconName); // 路径根据自身情况调整
-  } else {
-    // 开发模式
-    const projectRoot = path.join(__dirname, "../.."); // __dirname 指向 dist-electron/main，但资源在项目根目录，所以..指向上一级
-    iconPath = path.join(projectRoot, "icons", iconName);
-  }
+// 设置托盘：系统中应用名称为 spark-store，图标优先 spark-store，其次 spark-store.svg，再次替代图标
+const ICONS_DIR = app.isPackaged
+  ? path.join(process.resourcesPath, "icons")
+  : path.join(__dirname, "../..", "icons");
 
-  // 检查文件是否存在
-  if (fs.existsSync(iconPath)) {
-    logger.info("图标文件存在:" + iconPath);
-    return iconPath;
-  } else {
-    logger.error("图标文件不存在:" + iconPath);
-    // 返回一个默认图标路径或null
-    return null;
-  }
+function resolveIconPath(filename: string): string {
+  return path.join(ICONS_DIR, filename);
 }
 
-let tray = null;
+/** 按优先级返回托盘图标路径：spark-store(.png|.ico) → amber-pm-logo.png。托盘不支持 SVG，故不尝试 spark-store.svg */
+function getTrayIconPath(): string | null {
+  const ext = process.platform === "win32" ? ".ico" : ".png";
+  const candidates = [
+    `spark-store${ext}`
+  ];
+  for (const name of candidates) {
+    const iconPath = resolveIconPath(name);
+    if (fs.existsSync(iconPath)) {
+      logger.info("托盘图标使用: " + iconPath);
+      return iconPath;
+    }
+  }
+  logger.warn("未找到托盘图标，将使用替代图标。查找目录: " + ICONS_DIR);
+  return null;
+}
+
+/** 16x16 透明 PNG，用作托盘无图标时的替代 */
+const FALLBACK_TRAY_PNG =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHklEQVQ4T2NkYGD4z0ABYBwNwMAwGoChNQAAAABJRU5ErkJggg==";
+
+function getTrayImage(): string | ReturnType<typeof nativeImage.createFromDataURL> {
+  const iconPath = getTrayIconPath();
+  if (iconPath) return iconPath;
+  return nativeImage.createFromDataURL(FALLBACK_TRAY_PNG);
+}
+
+let tray: Tray | null = null;
 app.whenReady().then(() => {
-  tray = new Tray(getIconPath());
+  tray = new Tray(getTrayImage());
   const contextMenu = Menu.buildFromTemplate([
     {
       label: "显示主界面",

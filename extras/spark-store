@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# 基础参数，始终添加 --no-sandbox
+ARGS="--no-sandbox"
+
+# 检查是否在容器中运行
+# 方法1: 检查 root 路径
+ROOT_PATH=$(readlink -f /proc/self/root)
+if [ "$ROOT_PATH" != "/" ]; then
+    echo "检测到容器环境 (root path: $ROOT_PATH)"
+    ARGS="$ARGS --no-apm"
+fi
+
+# 方法2: 检查 IS_ACE_ENV 环境变量
+if [ "$IS_ACE_ENV" = "1" ]; then
+    echo "检测到 ACE 容器环境"
+    ARGS="$ARGS --no-apm"
+fi
+
+# 检查是否为 arm64 且为 wayland session
+ARCH=$(uname -m)
+if [ "$ARCH" = "aarch64" ] && [ "$XDG_SESSION_TYPE" = "wayland" ]; then
+    echo "检测到 arm64 架构和 Wayland 会话"
+    ARGS="$ARGS --disable-gpu"
+fi
+
+# 执行程序
+/opt/spark-store/bin/spark-store $ARGS "$@"

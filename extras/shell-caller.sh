@@ -55,10 +55,39 @@ case "$command_type" in
                 echo "操作已取消"
                 exit 0
             fi
+        elif [[ "$2" == "install" ]]; then
+            packages="${@:3}"
+            # 确认框通用参数
+            title="确认安装"
+            text="正在准备安装: $packages\n\n若这是您下达的安装指令，请选择确认继续安装"
+
+            # 优先尝试 garma，其次 zenity
+            if command -v garma &> /dev/null; then
+                garma --question --title="$title" --text="$text" \
+                      --ok-label="确认安装" --cancel-label="取消" --width=400
+                confirmed=$?
+            elif command -v zenity &> /dev/null; then
+                zenity --question --title="$title" --text="$text" \
+                       --ok-label="确认安装" --cancel-label="取消" --width=400
+                confirmed=$?
+            else
+                echo "错误：未找到 garma 或 zenity，无法显示确认对话框。安装操作已拒绝。"
+                exit 1
+            fi
+
+            # 根据确认结果执行
+            if [[ $confirmed -eq 0 ]]; then
+                /usr/bin/aptss "${@:2}" -y 2>&1
+                exit_code=$?
+            else
+                echo "操作已取消"
+                exit 0
+            fi
+
         else
-            # 非 remove 命令，直接执行 aptss
-            /usr/bin/aptss "${@:2}" 2>&1
-            exit_code=$?
+            # 非 remove 命令，拒绝执行
+            echo "拒绝执行 aptss 白名单外的指令"
+            exit 1
         fi
         ;;
 

@@ -1,4 +1,4 @@
-import { ipcMain, WebContents } from "electron";
+import { BrowserWindow, dialog, ipcMain, WebContents } from "electron";
 import { spawn, ChildProcess, exec } from "node:child_process";
 import { promisify } from "node:util";
 import fs from "node:fs";
@@ -101,6 +101,33 @@ const parseInstalledList = (output: string) => {
   return apps;
 };
 
+/** 检测本机是否已安装 apm 命令 */
+const checkApmAvailable = async (): Promise<boolean> => {
+  const { code, stdout } = await runCommandCapture("which", ["apm"]);
+  const found = code === 0 && stdout.trim().length > 0;
+  if (!found) logger.info("未检测到 apm 命令");
+  return found;
+};
+
+/** 提权执行 shell-caller aptss install apm 安装 APM，安装后需用户重启电脑 */
+const runInstallApm = async (superUserCmd: string): Promise<boolean> => {
+  const execCommand = superUserCmd || SHELL_CALLER_PATH;
+  const execParams = superUserCmd
+    ? [SHELL_CALLER_PATH, "aptss", "install", "apm"]
+    : [SHELL_CALLER_PATH, "aptss", "install", "apm"];
+  logger.info(`执行安装 APM: ${execCommand} ${execParams.join(" ")}`);
+  const { code, stdout, stderr } = await runCommandCapture(
+    execCommand,
+    execParams,
+  );
+  if (code !== 0) {
+    logger.error({ code, stdout, stderr }, "安装 APM 失败");
+    return false;
+  }
+  logger.info("安装 APM 完成");
+  return true;
+};
+
 const parseUpgradableList = (output: string) => {
   const apps: Array<{
     pkgname: string;
@@ -174,6 +201,63 @@ ipcMain.on("queue-install", async (event, download_json) => {
   let execCommand = "";
   const execParams = [];
   const downloadDir = `/tmp/spark-store/download/${pkgname}`;
+
+  // APM 应用：若本机没有 apm 命令，弹窗提示并可选提权安装 APM（安装后需重启电脑）
+  if (origin === "apm") {
+    const hasApm = await checkApmAvailable();
+    if (!hasApm) {
+      const win = BrowserWindow.fromWebContents(webContents);
+      const { response } = await dialog.showMessageBox(win ?? undefined, {
+        type: "question",
+        title: "需要安装 APM",
+        message: "此应用需要使用 APM 安装。",
+        detail:
+          "APM是星火应用商店的容器包管理器，安装APM后方可安装此应用，是否确认安装？",
+        buttons: ["确认", "取消"],
+        defaultId: 0,
+        cancelId: 1,
+      });
+      if (response !== 0) {
+        webContents.send("install-complete", {
+          id,
+          success: false,
+          time: Date.now(),
+          exitCode: -1,
+          message: JSON.stringify({
+            message: "用户取消安装 APM，无法继续安装此应用",
+            stdout: "",
+            stderr: "",
+          }),
+        });
+        return;
+      }
+      const installApmOk = await runInstallApm(superUserCmd);
+      if (!installApmOk) {
+        webContents.send("install-complete", {
+          id,
+          success: false,
+          time: Date.now(),
+          exitCode: -1,
+          message: JSON.stringify({
+            message: "安装 APM 失败，请检查网络或权限后重试",
+            stdout: "",
+            stderr: "",
+          }),
+        });
+        return;
+      } else {
+        // 安装APM成功，提示用户已安装成功，需要重启后方可展示应用
+        await dialog.showMessageBox(win ?? undefined, {
+          type: "info",
+          title: "APM 安装成功",
+          message: "恭喜您，APM 已成功安装",
+          detail: "APM 应用需重启后方可展示和使用，若完成安装后无法在应用列表中展示，请重启电脑后继续。",
+          buttons: ["确定"],
+          defaultId: 0,
+        });
+      }
+    }
+  }
 
   if (origin === "spark") {
     // Spark Store logic
@@ -586,31 +670,6 @@ ipcMain.handle("list-upgradable", async () => {
   return { success: true, apps };
 });
 
-ipcMain.handle("list-installed", async () => {
-  const superUserCmd = await checkSuperUserCommand();
-  const execCommand =
-    superUserCmd.length > 0 ? superUserCmd : SHELL_CALLER_PATH;
-  const execParams =
-    superUserCmd.length > 0
-      ? [SHELL_CALLER_PATH, "aptss", "list", "--installed"]
-      : ["aptss", "list", "--installed"];
-
-  const { code, stdout, stderr } = await runCommandCapture(
-    execCommand,
-    execParams,
-  );
-  if (code !== 0) {
-    logger.error(`list-installed failed: ${stderr || stdout}`);
-    return {
-      success: false,
-      message: stderr || stdout || `list-installed failed with code ${code}`,
-      apps: [],
-    };
-  }
-
-  const apps = parseInstalledList(stdout);
-  return { success: true, apps };
-});
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ipcMain.handle("uninstall-installed", async (_event, payload: any) => {
