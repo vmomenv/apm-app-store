@@ -143,7 +143,10 @@ const confirmUninstall = () => {
   uninstalling.value = true;
   logs.value = ["正在请求卸载: " + appPkg.value + "..."];
 
-  window.ipcRenderer.send("remove-installed", appPkg.value);
+  window.ipcRenderer.send("remove-installed", {
+    pkgname: appPkg.value,
+    origin: props.app?.origin || "spark",
+  });
 };
 
 // Listeners

@@ -1,12 +1,10 @@
-// window.ipcRenderer.on('main-process-message', (_event, ...args) => {
-//   console.log('[Receive Main-process message]:', ...args)
-// })
 import pino from "pino";
 
 import {
   APM_STORE_STATS_BASE_URL,
   currentApp,
-  currentAppIsInstalled,
+  currentAppSparkInstalled,
+  currentAppApmInstalled,
 } from "../global/storeConfig";
 import { APM_STORE_BASE_URL } from "../global/storeConfig";
 import { downloads } from "../global/downloadStatus";
@@ -23,22 +21,28 @@ import axios from "axios";
 let downloadIdCounter = 0;
 const logger = pino({ name: "processInstall.ts" });
 
-export const handleInstall = () => {
-  if (!currentApp.value?.pkgname) return;
+export const handleInstall = (appObj?: App) => {
+  const targetApp = appObj || currentApp.value;
+  if (!targetApp?.pkgname) return;
 
-  if (downloads.value.find((d) => d.pkgname === currentApp.value?.pkgname)) {
-    logger.info(`任务已存在，忽略重复添加: ${currentApp.value.pkgname}`);
+  if (downloads.value.find((d) => d.pkgname === targetApp.pkgname)) {
+    logger.info(`任务已存在，忽略重复添加: ${targetApp.pkgname}`);
     return;
   }
 
   downloadIdCounter += 1;
   // 创建下载任务
+  const arch = window.apm_store.arch || "amd64";
+  const finalArch =
+    targetApp.origin === "spark" ? `${arch}-store` : `${arch}-apm`;
+
   const download: DownloadItem = {
     id: downloadIdCounter,
-    name: currentApp.value.name,
-    pkgname: currentApp.value.pkgname,
-    version: currentApp.value.version,
-    icon: `${APM_STORE_BASE_URL}/${window.apm_store.arch}/${currentApp.value.category}/${currentApp.value.pkgname}/icon.png`,
+    name: targetApp.name,
+    pkgname: targetApp.pkgname,
+    version: targetApp.version,
+    icon: `${APM_STORE_BASE_URL}/${finalArch}/${targetApp.category}/${targetApp.pkgname}/icon.png`,
+    origin: targetApp.origin,
     status: "queued",
     progress: 0,
     downloadedSize: 0,
@@ -49,8 +53,8 @@ export const handleInstall = () => {
     logs: [{ time: Date.now(), message: "开始下载..." }],
     source: "APM Store",
     retry: false,
-    filename: currentApp.value.filename,
-    metalinkUrl: `${window.apm_store.arch}/${currentApp.value.category}/${currentApp.value.pkgname}/${currentApp.value.filename}.metalink`,
+    filename: targetApp.filename,
+    metalinkUrl: `${finalArch}/${targetApp.category}/${targetApp.pkgname}/${targetApp.filename}.metalink`,
   };
 
   downloads.value.push(download);
@@ -68,7 +72,7 @@ export const handleInstall = () => {
     .post(
       "/handle_post",
       {
-        path: `${window.apm_store.arch}/${currentApp.value.category}/${currentApp.value.pkgname}`,
+        path: `${finalArch}/${targetApp.category}/${targetApp.pkgname}`,
       },
       {
         headers: {
@@ -97,12 +101,15 @@ export const handleUpgrade = (app: App) => {
   }
 
   downloadIdCounter += 1;
+  const arch = window.apm_store.arch || "amd64";
+  const finalArch = app.origin === "spark" ? `${arch}-store` : `${arch}-apm`;
+
   const download: DownloadItem = {
     id: downloadIdCounter,
     name: app.name,
     pkgname: app.pkgname,
     version: app.version,
-    icon: `${APM_STORE_BASE_URL}/${window.apm_store.arch}/${app.category}/${app.pkgname}/icon.png`,
+    icon: `${APM_STORE_BASE_URL}/${finalArch}/${app.category}/${app.pkgname}/icon.png`,
     status: "queued",
     progress: 0,
     downloadedSize: 0,
@@ -114,22 +121,36 @@ export const handleUpgrade = (app: App) => {
     source: "APM Update",
     retry: false,
     upgradeOnly: true,
+    origin: app.origin,
   };
 
   downloads.value.push(download);
   window.ipcRenderer.send("queue-install", JSON.stringify(download));
 };
 
-export const handleRemove = () => {
-  if (!currentApp.value?.pkgname) return;
-  window.ipcRenderer.send("remove-installed", currentApp.value.pkgname);
+export const handleRemove = (appObj?: App) => {
+  const targetApp = appObj || currentApp.value;
+  if (!targetApp?.pkgname) return;
+  window.ipcRenderer.send("remove-installed", {
+    pkgname: targetApp.pkgname,
+    origin: targetApp.origin,
+  });
 };
 
 window.ipcRenderer.on("remove-complete", (_event, log: DownloadResult) => {
   if (log.success) {
-    currentAppIsInstalled.value = false;
+    if (log.origin === "spark") {
+      currentAppSparkInstalled.value = false;
+    } else {
+      currentAppApmInstalled.value = false;
+    }
   } else {
-    currentAppIsInstalled.value = true;
+    // We could potentially restore the value, but if remove failed, it should still be installed.
+    if (log.origin === "spark") {
+      currentAppSparkInstalled.value = true;
+    } else {
+      currentAppApmInstalled.value = true;
+    }
     console.error("卸载失败:", log.message);
   }
 });

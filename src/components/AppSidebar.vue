@@ -28,6 +28,7 @@
     </div>
 
     <ThemeToggle :theme-mode="themeMode" @toggle="toggleTheme" />
+    <StoreModeSwitcher />
 
     <div class="flex-1 space-y-2 overflow-y-auto scrollbar-muted pr-2">
       <button

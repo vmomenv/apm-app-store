@@ -21,6 +21,7 @@ type InstallTask = {
   downloadDir?: string;
   metalinkUrl?: string;
   filename?: string;
+  origin: "spark" | "apm";
 };
 
 const SHELL_CALLER_PATH = "/opt/spark-store/extras/shell-caller.sh";
@@ -52,7 +53,7 @@ const runCommandCapture = async (execCommand: string, execParams: string[]) => {
   return await new Promise<{ code: number; stdout: string; stderr: string }>(
     (resolve) => {
       const child = spawn(execCommand, execParams, {
-        shell: true,
+        shell: false,
         env: process.env,
       });
 
@@ -137,24 +138,28 @@ const parseUpgradableList = (output: string) => {
 
 // Listen for download requests from renderer process
 ipcMain.on("queue-install", async (event, download_json) => {
-  const download = JSON.parse(download_json);
-  const { id, pkgname, metalinkUrl, filename, upgradeOnly } = download || {};
+  const download =
+    typeof download_json === "string"
+      ? JSON.parse(download_json)
+      : download_json;
+  const { id, pkgname, metalinkUrl, filename, upgradeOnly, origin } =
+    download || {};
 
   if (!id || !pkgname) {
     logger.warn("passed arguments missing id or pkgname");
     return;
   }
 
-  logger.info(`收到下载任务: ${id},  软件包名称: ${pkgname}`);
+  logger.info(`收到下载任务: ${id}, 软件包名称: ${pkgname}, 来源: ${origin}`);
 
   // 避免重复添加同一任务，但允许重试下载
   if (tasks.has(id) && !download.retry) {
-    tasks.get(id)?.webContents.send("install-log", {
+    tasks.get(id)?.webContents?.send("install-log", {
       id,
       time: Date.now(),
       message: `任务id： ${id} 已在列表中，忽略重复添加`,
     });
-    tasks.get(id)?.webContents.send("install-complete", {
+    tasks.get(id)?.webContents?.send("install-complete", {
       id: id,
       success: false,
       time: Date.now(),
@@ -165,42 +170,42 @@ ipcMain.on("queue-install", async (event, download_json) => {
   }
 
   const webContents = event.sender;
-
-  // 开始组装安装命令
   const superUserCmd = await checkSuperUserCommand();
   let execCommand = "";
   const execParams = [];
   const downloadDir = `/tmp/spark-store/download/${pkgname}`;
 
-  // 升级操作：使用 spark-update-tool
-  if (upgradeOnly) {
-    execCommand = "pkexec";
-    execParams.push("spark-update-tool", pkgname);
-    logger.info(`升级模式: 使用 spark-update-tool 升级 ${pkgname}`);
-  } else if (superUserCmd.length > 0) {
-    execCommand = superUserCmd;
-    execParams.push(SHELL_CALLER_PATH);
-
-    if (metalinkUrl && filename) {
-      execParams.push(
-        "ssinstall",
-        `${downloadDir}/${filename}`,
-        "--delete-after-install",
-      );
+  if (origin === "spark") {
+    // Spark Store logic
+    if (upgradeOnly) {
+      execCommand = "pkexec";
+      execParams.push("spark-update-tool", pkgname);
     } else {
-      execParams.push("aptss", "install", "-y", pkgname);
+      execCommand = superUserCmd || SHELL_CALLER_PATH;
+      if (superUserCmd) execParams.push(SHELL_CALLER_PATH);
+
+      if (metalinkUrl && filename) {
+        execParams.push(
+          "ssinstall",
+          `${downloadDir}/${filename}`,
+          "--delete-after-install",
+        );
+      } else {
+        execParams.push("aptss", "install", "-y", pkgname);
+      }
     }
   } else {
-    execCommand = SHELL_CALLER_PATH;
+    // APM Store logic
+    execCommand = superUserCmd || SHELL_CALLER_PATH;
+    if (superUserCmd) {
+      execParams.push(SHELL_CALLER_PATH);
+    }
+    execParams.push("apm");
 
     if (metalinkUrl && filename) {
-      execParams.push(
-        "ssinstall",
-        `${downloadDir}/${filename}`,
-        "--delete-after-install",
-      );
+      execParams.push("ssaudit", `${downloadDir}/${filename}`);
     } else {
-      execParams.push("aptss", "install", "-y", pkgname);
+      execParams.push("install", "-y", pkgname);
     }
   }
 
@@ -215,6 +220,7 @@ ipcMain.on("queue-install", async (event, download_json) => {
     downloadDir,
     metalinkUrl,
     filename,
+    origin: origin || "apm",
   };
   tasks.set(id, task);
   if (idle) processNextInQueue();
@@ -340,7 +346,7 @@ async function processNextInQueue() {
       stderr: string;
     }>((resolve, reject) => {
       const child = spawn(task.execCommand, task.execParams, {
-        shell: true,
+        shell: false,
         env: process.env,
       });
       task.install_process = child;
@@ -409,16 +415,52 @@ async function processNextInQueue() {
   }
 }
 
-ipcMain.handle("check-installed", async (_event, pkgname: string) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ipcMain.handle("check-installed", async (_event, payload: any) => {
+  const pkgname = typeof payload === "string" ? payload : payload.pkgname;
+  const origin = typeof payload === "string" ? "spark" : payload.origin;
+
   if (!pkgname) {
     logger.warn("check-installed missing pkgname");
     return false;
   }
 
-  logger.info(`检查应用是否已安装: ${pkgname}`);
+  logger.info(`检查应用是否已安装: ${pkgname} (来源: ${origin})`);
+
+  let isInstalled = false;
+
+  if (origin === "apm") {
+    const { code, stdout } = await runCommandCapture("apm", [
+      "list",
+      "--installed",
+    ]);
+    if (code === 0) {
+      // eslint-disable-next-line no-control-regex
+      const cleanStdout = stdout.replace(/\x1b\[[0-9;]*m/g, "");
+      const lines = cleanStdout.split("\n");
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (
+          !trimmed ||
+          trimmed.startsWith("Listing") ||
+          trimmed.startsWith("[INFO]") ||
+          trimmed.startsWith("警告")
+        )
+          continue;
+        if (trimmed.includes("/")) {
+          const installedPkg = trimmed.split("/")[0].trim();
+          if (installedPkg === pkgname) {
+            isInstalled = true;
+            logger.info(`应用已安装 (APM检测): ${pkgname}`);
+            break;
+          }
+        }
+      }
+    }
+    return isInstalled;
+  }
 
   const checkScript = "/opt/spark-store/extras/check-is-installed";
-  let isInstalled = false;
 
   // 首先尝试使用内置脚本
   if (fs.existsSync(checkScript)) {
@@ -445,49 +487,52 @@ ipcMain.handle("check-installed", async (_event, pkgname: string) => {
     if (isInstalled) return true;
   }
 
-  // // 如果脚本不存在或检测不到，使用 dpkg-query 作为后备
-  // logger.info(`尝试使用 dpkg-query 检测: ${pkgname}`);
-  // const { code } = await runCommandCapture("dpkg-query", [
-  //   "-W",
-  //   "-f='${Status}'",
-  //   pkgname,
-  // ]);
+  // 如果脚本不存在或检测不到，使用 dpkg-query 作为后备
+  logger.info(`尝试使用 dpkg-query 检测: ${pkgname}`);
+  const { code, stdout } = await runCommandCapture("dpkg-query", [
+    "-W",
+    "-f=${Status}",
+    pkgname,
+  ]);
 
-  // if (code === 0) {
-  //   isInstalled = true;
-  //   logger.info(`应用已安装 (dpkg-query 检测): ${pkgname}`);
-  // } else {
-  //   logger.info(`应用未安装: ${pkgname}`);
-  // }
+  if (code === 0 && stdout.includes("install ok installed")) {
+    isInstalled = true;
+    logger.info(`应用已安装 (dpkg-query 检测): ${pkgname}`);
+  } else {
+    logger.info(`应用未安装 (dpkg-query 检测): ${pkgname}`);
+  }
 
   return isInstalled;
 });
 
-ipcMain.on("remove-installed", async (_event, pkgname: string) => {
+ipcMain.on("remove-installed", async (_event, payload) => {
   const webContents = _event.sender;
+  const pkgname = typeof payload === "string" ? payload : payload.pkgname;
+  const origin = typeof payload === "string" ? "spark" : payload.origin;
+
   if (!pkgname) {
     logger.warn("remove-installed missing pkgname");
     return;
   }
-  logger.info(`卸载已安装应用: ${pkgname}`);
+  logger.info(`卸载已安装应用: ${pkgname} (来源: ${origin})`);
 
-  const superUserCmd = await checkSuperUserCommand();
   let execCommand = "";
   const execParams = [];
-  if (superUserCmd.length > 0) {
-    execCommand = superUserCmd;
-    execParams.push(SHELL_CALLER_PATH);
+
+  const superUserCmd = await checkSuperUserCommand();
+  execCommand = superUserCmd || SHELL_CALLER_PATH;
+  if (superUserCmd) execParams.push(SHELL_CALLER_PATH);
+
+  if (origin === "spark") {
+    execParams.push("aptss", "remove", pkgname);
   } else {
-    execCommand = SHELL_CALLER_PATH;
+    execParams.push("apm", "remove", "-y", pkgname);
   }
-  const child = spawn(
-    execCommand,
-    [...execParams, "aptss", "remove", pkgname],
-    {
-      shell: true,
-      env: process.env,
-    },
-  );
+
+  const child = spawn(execCommand, execParams, {
+    shell: false,
+    env: process.env,
+  });
   let output = "";
 
   child.stdout.on("data", (data) => {
@@ -517,6 +562,7 @@ ipcMain.on("remove-installed", async (_event, pkgname: string) => {
       time: Date.now(),
       exitCode: code,
       message: JSON.stringify(messageJSONObj),
+      origin: origin,
     } satisfies ChannelPayload);
   });
 });
@@ -566,19 +612,25 @@ ipcMain.handle("list-installed", async () => {
   return { success: true, apps };
 });
 
-ipcMain.handle("uninstall-installed", async (_event, pkgname: string) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ipcMain.handle("uninstall-installed", async (_event, payload: any) => {
+  const pkgname = typeof payload === "string" ? payload : payload.pkgname;
+  const origin = typeof payload === "string" ? "spark" : payload.origin;
+
   if (!pkgname) {
     logger.warn("uninstall-installed missing pkgname");
     return { success: false, message: "missing pkgname" };
   }
 
   const superUserCmd = await checkSuperUserCommand();
-  const execCommand =
-    superUserCmd.length > 0 ? superUserCmd : SHELL_CALLER_PATH;
-  const execParams =
-    superUserCmd.length > 0
-      ? [SHELL_CALLER_PATH, "aptss", "remove", "-y", pkgname]
-      : ["aptss", "remove", "-y", pkgname];
+  const execCommand = superUserCmd || SHELL_CALLER_PATH;
+  const execParams = superUserCmd ? [SHELL_CALLER_PATH] : [];
+
+  if (origin === "apm") {
+    execParams.push("apm", "remove", "-y", pkgname);
+  } else {
+    execParams.push("aptss", "remove", "-y", pkgname);
+  }
 
   const { code, stdout, stderr } = await runCommandCapture(
     execCommand,
@@ -600,13 +652,22 @@ ipcMain.handle("uninstall-installed", async (_event, pkgname: string) => {
   };
 });
 
-ipcMain.handle("launch-app", async (_event, pkgname: string) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ipcMain.handle("launch-app", async (_event, payload: any) => {
+  const pkgname = typeof payload === "string" ? payload : payload.pkgname;
+  const origin = typeof payload === "string" ? "spark" : payload.origin;
+
   if (!pkgname) {
     logger.warn("No pkgname provided for launch-app");
   }
 
-  const execCommand = "/opt/spark-store/extras/app-launcher";
-  const execParams = ["start", pkgname];
+  let execCommand = "/opt/spark-store/extras/app-launcher";
+  let execParams = ["start", pkgname];
+
+  if (origin === "apm") {
+    execCommand = "/opt/spark-store/extras/apm-launcher";
+    execParams = ["launch", pkgname];
+  }
 
   logger.info(
     `Launching app: ${pkgname} with command: ${execCommand} ${execParams.join(" ")}`,

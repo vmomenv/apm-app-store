@@ -13,6 +13,7 @@ export interface DownloadResult extends InstallStatus {
   success: boolean;
   exitCode: number | null;
   status: DownloadItemStatus | null;
+  origin?: "spark" | "apm";
 }
 
 export type DownloadItemStatus =
@@ -22,6 +23,8 @@ export type DownloadItemStatus =
   | "completed"
   | "failed"
   | "queued"; // 可根据实际状态扩展
+
+export type StoreMode = "spark" | "apm" | "hybrid";
 
 export interface DownloadItem {
   id: number;
@@ -42,6 +45,7 @@ export interface DownloadItem {
     message: string; // 日志消息
   }>;
   source: string; // 例如 'APM Store'
+  origin: "spark" | "apm"; // 数据来源
   retry: boolean; // 当前是否为重试下载
   upgradeOnly?: boolean; // 是否为仅升级任务
   error?: string;
@@ -99,10 +103,15 @@ export interface App {
   img_urls: string[];
   icons: string;
   category: string; // Frontend added
+  origin: "spark" | "apm"; // 数据来源
   installed?: boolean; // Frontend state
   flags?: string; // Tags in apm packages manager, e.g. "automatic" for dependencies
   arch?: string; // Architecture, e.g. "amd64", "arm64"
   currentStatus: "not-installed" | "installed"; // Current installation status
+  isMerged?: boolean; // FLAG for overlapping apps
+  sparkApp?: App; // Optional reference to the spark version
+  apmApp?: App; // Optional reference to the apm version
+  viewingOrigin?: "spark" | "apm"; // Currently viewed origin inside the app modal
 }
 
 export interface UpdateAppItem {
@@ -130,3 +139,26 @@ export type ChannelPayload = {
   message: string;
   [k: string]: unknown;
 };
+
+export interface CategoryInfo {
+  zh: string;
+  origins?: string[];
+  origin?: "spark" | "apm";
+  [k: string]: unknown;
+}
+
+export interface HomeLink {
+  name: string;
+  url: string;
+  icon: string;
+  more?: string;
+  imgUrl?: string;
+  type?: string;
+  origin?: "spark" | "apm";
+  [k: string]: unknown;
+}
+
+export interface HomeList {
+  title: string;
+  apps: App[];
+}

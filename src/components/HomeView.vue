@@ -12,10 +12,10 @@
           :href="link.type === '_blank' ? undefined : link.url"
           @click.prevent="onLinkClick(link)"
           class="flex flex-col items-start gap-2 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm hover:shadow-lg transition"
-          :title="link.more"
+          :title="link.more as string"
         >
           <img
-            :src="computedImgUrl(link.imgUrl)"
+            :src="computedImgUrl(link)"
             class="h-20 w-full object-contain"
             loading="lazy"
           />
@@ -50,25 +50,27 @@
 <script setup lang="ts">
 import AppCard from "./AppCard.vue";
 import { APM_STORE_BASE_URL } from "../global/storeConfig";
+import type { HomeLink, HomeList, App } from "../global/typedefinition";
 
 defineProps<{
-  links: Array<Record<string, unknown>>;
-  lists: Array<{ title: string; apps: Record<string, unknown>[] }>;
+  links: HomeLink[];
+  lists: HomeList[];
   loading: boolean;
   error: string;
 }>();
 
 defineEmits<{
-  (e: "open-detail", app: Record<string, unknown>): void;
+  (e: "open-detail", app: App | Record<string, unknown>): void;
 }>();
 
-const computedImgUrl = (imgUrl: string) => {
-  if (!imgUrl) return "";
-  // imgUrl is like /home/links/bbs.png -> join with base
-  return `${APM_STORE_BASE_URL}/${window.apm_store.arch}${imgUrl}`;
+const computedImgUrl = (link: HomeLink) => {
+  if (!link.imgUrl) return "";
+  const arch = window.apm_store.arch || "amd64";
+  const finalArch = link.origin === "spark" ? `${arch}-store` : `${arch}-apm`;
+  return `${APM_STORE_BASE_URL}/${finalArch}${link.imgUrl}`;
 };
 
-const onLinkClick = (link: Record<string, unknown>) => {
+const onLinkClick = (link: HomeLink) => {
   if (link.type === "_blank") {
     window.open(link.url, "_blank");
   } else {
