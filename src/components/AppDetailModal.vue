@@ -10,16 +10,16 @@
     <div
       v-if="show"
       v-bind="attrs"
-      class="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-900/70 p-4"
+      class="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-900/60 backdrop-blur-sm p-4"
       @click.self="closeModal"
     >
       <div
-        class="modal-panel relative w-full max-w-4xl max-h-[85vh] overflow-y-auto scrollbar-nowidth rounded-3xl border border-white/10 bg-white/95 p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+        class="modal-panel relative w-full max-w-4xl max-h-[85vh] overflow-y-auto scrollbar-nowidth rounded-2xl border border-slate-200/60 bg-white/98 p-6 shadow-2xl dark:border-slate-700/50 dark:bg-slate-900/98"
       >
         <div class="flex flex-col gap-4 lg:flex-row lg:items-center">
           <div class="flex flex-1 items-center gap-4">
             <div
-              class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-b from-slate-100 to-slate-200 shadow-inner dark:from-slate-800 dark:to-slate-700"
+              class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200/80 shadow-inner ring-1 ring-slate-200/50 dark:from-slate-700 dark:to-slate-800 dark:ring-slate-600/30"
             >
               <img
                 v-if="app"
@@ -133,11 +133,11 @@
             </template>
             <button
               type="button"
-              class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/70 text-slate-500 transition hover:text-slate-900 dark:border-slate-700"
+              class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/60 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
               @click="closeModal"
               aria-label="关闭"
             >
-              <i class="fas fa-xmark"></i>
+              <i class="fas fa-xmark text-sm"></i>
             </button>
           </div>
         </div>

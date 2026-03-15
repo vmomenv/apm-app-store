@@ -251,7 +251,8 @@ ipcMain.on("queue-install", async (event, download_json) => {
           type: "info",
           title: "APM 安装成功",
           message: "恭喜您，APM 已成功安装",
-          detail: "APM 应用需重启后方可展示和使用，若完成安装后无法在应用列表中展示，请重启电脑后继续。",
+          detail:
+            "APM 应用需重启后方可展示和使用，若完成安装后无法在应用列表中展示，请重启电脑后继续。",
           buttons: ["确定"],
           defaultId: 0,
         });
@@ -669,7 +670,6 @@ ipcMain.handle("list-upgradable", async () => {
   const apps = parseUpgradableList(stdout);
   return { success: true, apps };
 });
-
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ipcMain.handle("uninstall-installed", async (_event, payload: any) => {
