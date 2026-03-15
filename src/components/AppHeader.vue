@@ -78,11 +78,4 @@ watch(
     localSearchQuery.value = newVal || "";
   },
 );
-
-watch(
-  () => props.activeCategory,
-  () => {
-    localSearchQuery.value = "";
-  },
-);
 </script>

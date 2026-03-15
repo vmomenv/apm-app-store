@@ -342,7 +342,6 @@ const toggleTheme = () => {
 
 const selectCategory = (category: string) => {
   activeCategory.value = category;
-  searchQuery.value = "";
   isSidebarOpen.value = false;
   if (
     category === "home" &&
