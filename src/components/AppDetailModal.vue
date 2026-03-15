@@ -298,7 +298,9 @@ watch(
     isIconLoaded.value = false;
     if (newApp) {
       if (newApp.isMerged) {
-        viewingOrigin.value = newApp.sparkApp ? "spark" : "apm";
+        // 若父组件已根据安装状态设置了优先展示的版本，则使用；否则默认 Spark
+        viewingOrigin.value =
+          newApp.viewingOrigin ?? (newApp.sparkApp ? "spark" : "apm");
       } else {
         viewingOrigin.value = newApp.origin;
       }

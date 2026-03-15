@@ -350,7 +350,7 @@ const selectCategory = (category: string) => {
   }
 };
 
-const openDetail = (app: App | Record<string, unknown>) => {
+const openDetail = async (app: App | Record<string, unknown>) => {
   // 提取 pkgname（必须存在）
   const pkgname = (app as Record<string, unknown>).pkgname as string;
   if (!pkgname) {
@@ -389,10 +389,40 @@ const openDetail = (app: App | Record<string, unknown>) => {
     } as App;
   }
 
-  // 后续逻辑使用 fullApp
+  // 合并应用：先检查 Spark/APM 安装状态，已安装的版本优先展示
+  if (fullApp.isMerged && (fullApp.sparkApp || fullApp.apmApp)) {
+    const [sparkInstalled, apmInstalled] = await Promise.all([
+      fullApp.sparkApp
+        ? window.ipcRenderer.invoke("check-installed", {
+            pkgname: fullApp.sparkApp.pkgname,
+            origin: "spark",
+          }) as Promise<boolean>
+        : Promise.resolve(false),
+      fullApp.apmApp
+        ? window.ipcRenderer.invoke("check-installed", {
+            pkgname: fullApp.apmApp.pkgname,
+            origin: "apm",
+          }) as Promise<boolean>
+        : Promise.resolve(false),
+    ]);
+    if (sparkInstalled && !apmInstalled) {
+      fullApp.viewingOrigin = "spark";
+    } else if (apmInstalled && !sparkInstalled) {
+      fullApp.viewingOrigin = "apm";
+    }
+    // 若都安装或都未安装，不设置 viewingOrigin，由模态框默认展示 spark
+  }
+
+  const displayAppForScreenshots =
+    fullApp.viewingOrigin !== undefined && fullApp.isMerged
+      ? (fullApp.viewingOrigin === "spark"
+          ? fullApp.sparkApp
+          : fullApp.apmApp) ?? fullApp
+      : fullApp;
+
   currentApp.value = fullApp;
   currentScreenIndex.value = 0;
-  loadScreenshots(fullApp);
+  loadScreenshots(displayAppForScreenshots);
   showModal.value = true;
 
   currentAppSparkInstalled.value = false;
@@ -891,10 +921,7 @@ const loadCategories = async () => {
 
     for (const mode of modes) {
       const finalArch = mode === "spark" ? `${arch}-store` : `${arch}-apm`;
-      const path =
-        mode === "spark"
-          ? "/store/categories.json"
-          : `/${finalArch}/categories.json`;
+      const path = `/${finalArch}/categories.json`;
 
       try {
         const response = await axiosInstance.get(cacheBuster(path));
@@ -943,10 +970,7 @@ const loadApps = async (onFirstBatch?: () => void) => {
               const finalArch =
                 mode === "spark" ? `${arch}-store` : `${arch}-apm`;
 
-              const path =
-                mode === "spark"
-                  ? `/store/${category}/applist.json`
-                  : `/${finalArch}/${category}/applist.json`;
+              const path = `/${finalArch}/${category}/applist.json`;
 
               logger.info(`加载分类: ${category} (来源: ${mode})`);
               const categoryApps = await fetchWithRetry<AppJson[]>(
