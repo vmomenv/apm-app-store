@@ -1,9 +1,18 @@
 <template>
-  <div class="space-y-6">
-    <div v-if="loading" class="text-center text-slate-500">
-      正在加载首页内容…
+  <div class="space-y-8">
+    <div
+      v-if="loading"
+      class="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-slate-400"
+    >
+      <i class="fas fa-spinner fa-spin text-2xl mb-3"></i>
+      <span class="text-sm">正在加载首页内容…</span>
     </div>
-    <div v-else-if="error" class="text-center text-rose-600">{{ error }}</div>
+    <div
+      v-else-if="error"
+      class="rounded-2xl border border-rose-200/70 bg-rose-50/60 px-6 py-4 text-center text-sm text-rose-600 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300"
+    >
+      {{ error }}
+    </div>
     <div v-else>
       <div class="grid gap-4 auto-fit-grid">
         <a
@@ -11,29 +20,40 @@
           :key="link.url + link.name"
           :href="link.type === '_blank' ? undefined : link.url"
           @click.prevent="onLinkClick(link)"
-          class="flex flex-col items-start gap-2 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm hover:shadow-lg transition"
+          class="flex flex-col items-start gap-3 rounded-2xl border border-slate-200/60 bg-white/95 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-md dark:border-slate-700/50 dark:bg-slate-800/70 dark:hover:border-brand/40"
           :title="link.more as string"
         >
-          <img
-            :src="computedImgUrl(link)"
-            class="h-20 w-full object-contain"
-            loading="lazy"
-          />
-          <div class="text-base font-semibold text-slate-900">
+          <div
+            class="flex h-16 w-full items-center justify-center overflow-hidden rounded-xl bg-slate-50 dark:bg-slate-800/80"
+          >
+            <img
+              :src="computedImgUrl(link)"
+              class="max-h-14 w-auto object-contain"
+              loading="lazy"
+              alt=""
+            />
+          </div>
+          <div class="text-base font-semibold text-slate-900 dark:text-white">
             {{ link.name }}
           </div>
-          <div class="text-sm text-slate-500">{{ link.more }}</div>
+          <div class="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
+            {{ link.more }}
+          </div>
         </a>
       </div>
 
-      <div class="space-y-6 mt-6">
-        <section v-for="section in lists" :key="section.title">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-slate-900">
-              {{ section.title }}
-            </h3>
-          </div>
-          <div class="mt-3 grid gap-4 auto-fit-grid">
+      <div class="space-y-6 mt-8">
+        <section
+          v-for="section in lists"
+          :key="section.title"
+          class="space-y-4"
+        >
+          <h3
+            class="text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100 border-b border-slate-200/70 dark:border-slate-700/70 pb-2"
+          >
+            {{ section.title }}
+          </h3>
+          <div class="grid gap-4 auto-fit-grid">
             <AppCard
               v-for="app in section.apps"
               :key="app.pkgname"

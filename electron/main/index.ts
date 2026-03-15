@@ -17,6 +17,7 @@ import pino from "pino";
 import { handleCommandLine } from "./deeplink.js";
 import { isLoaded } from "../global.js";
 import { tasks } from "./backend/install-manager.js";
+import { sendTelemetryOnce } from "./backend/telemetry.js";
 
 // Assure single instance application
 if (!app.requestSingleInstanceLock()) {
@@ -64,13 +65,21 @@ let win: BrowserWindow | null = null;
 const preload = path.join(__dirname, "../preload/index.mjs");
 const indexHtml = path.join(RENDERER_DIST, "index.html");
 
-// Use app.getVersion() when the app is packaged.
+/** 与项目 package.json 一致的版本号：打包用 app.getVersion()，未打包时读 package.json */
+function getAppVersion(): string {
+  if (app.isPackaged) return app.getVersion();
+  const pkgPath = path.join(process.env.APP_ROOT ?? __dirname, "package.json");
+  try {
+    const raw = fs.readFileSync(pkgPath, "utf8");
+    const pkg = JSON.parse(raw) as { version?: string };
+    return typeof pkg.version === "string" ? pkg.version : "dev";
+  } catch {
+    return "dev";
+  }
+}
+
 const getUserAgent = (): string => {
-  const version =
-    app && app.isPackaged
-      ? app.getVersion()
-      : process.env.npm_package_version || "dev";
-  return `Spark-Store/${version}`;
+  return `Spark-Store/${getAppVersion()}`;
 };
 
 logger.info("User Agent: " + getUserAgent());
@@ -86,9 +95,8 @@ function getStoreFilterFromArgv(): "spark" | "apm" | "both" {
   return "both";
 }
 
-ipcMain.handle(
-  "get-store-filter",
-  (): "spark" | "apm" | "both" => getStoreFilterFromArgv(),
+ipcMain.handle("get-store-filter", (): "spark" | "apm" | "both" =>
+  getStoreFilterFromArgv(),
 );
 
 async function createWindow() {
@@ -204,6 +212,8 @@ app.whenReady().then(() => {
   });
   createWindow();
   handleCommandLine(process.argv);
+  // 启动后执行一次遥测（仅 Linux，不阻塞）
+  sendTelemetryOnce(getAppVersion());
 });
 
 app.on("window-all-closed", () => {
@@ -247,9 +257,7 @@ function resolveIconPath(filename: string): string {
 /** 按优先级返回托盘图标路径：spark-store(.png|.ico) → amber-pm-logo.png。托盘不支持 SVG，故不尝试 spark-store.svg */
 function getTrayIconPath(): string | null {
   const ext = process.platform === "win32" ? ".ico" : ".png";
-  const candidates = [
-    `spark-store${ext}`
-  ];
+  const candidates = [`spark-store${ext}`];
   for (const name of candidates) {
     const iconPath = resolveIconPath(name);
     if (fs.existsSync(iconPath)) {
@@ -265,7 +273,9 @@ function getTrayIconPath(): string | null {
 const FALLBACK_TRAY_PNG =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHklEQVQ4T2NkYGD4z0ABYBwNwMAwGoChNQAAAABJRU5ErkJggg==";
 
-function getTrayImage(): string | ReturnType<typeof nativeImage.createFromDataURL> {
+function getTrayImage():
+  | string
+  | ReturnType<typeof nativeImage.createFromDataURL> {
   const iconPath = getTrayIconPath();
   if (iconPath) return iconPath;
   return nativeImage.createFromDataURL(FALLBACK_TRAY_PNG);
