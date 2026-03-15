@@ -20,8 +20,11 @@ case "$command_type" in
 
     "ssinstall")
         # 执行 ssinstall 命令（跳过第一个参数）
-        /usr/bin/ssinstall "${@:2}" 2>&1
+        /usr/bin/ssinstall "${@:2}" --native 2>&1
         exit_code=$?
+        if [[ "$exit_code" != "0" ]];then
+            echo "安装失败，可尝试安装对应的 APM 版本应用；若无对应的 APM 版本应用，可提交用户反馈"
+        fi
         ;;
 
     "aptss")
