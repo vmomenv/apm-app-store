@@ -1,13 +1,12 @@
 <template>
-  <header class="flex flex-col gap-4">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-5">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center">
       <div class="flex items-center gap-3">
         <button
           type="button"
-          class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/60 bg-white/90 text-slate-500 shadow-sm backdrop-blur-sm transition hover:border-slate-300 hover:bg-white hover:text-slate-700 lg:hidden dark:border-slate-700/60 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+          class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200/70 bg-white/80 text-slate-500 shadow-sm backdrop-blur transition hover:bg-slate-50 lg:hidden dark:border-slate-800/70 dark:bg-slate-900/60 dark:text-slate-400 dark:hover:bg-slate-800"
           @click="$emit('toggle-sidebar')"
           title="切换侧边栏"
-          aria-label="切换侧边栏"
         >
           <i class="fas fa-bars"></i>
         </button>
@@ -17,19 +16,16 @@
           @open-install-settings="$emit('open-install-settings')"
         />
       </div>
-      <div class="w-full flex-1 min-w-0">
+      <div class="w-full flex-1">
         <label for="searchBox" class="sr-only">搜索应用</label>
         <div class="relative">
-          <span
-            class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100/80 text-slate-400 dark:bg-slate-800/80 dark:text-slate-500"
-            aria-hidden="true"
-          >
-            <i class="fas fa-search text-sm"></i>
-          </span>
+          <i
+            class="fas fa-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+          ></i>
           <input
             id="searchBox"
             v-model="localSearchQuery"
-            class="w-full rounded-xl border border-slate-200/70 bg-white/95 py-3 pl-12 pr-4 text-sm text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand/60 focus:ring-2 focus:ring-brand/20 dark:border-slate-700/70 dark:bg-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-brand/50 dark:focus:ring-brand/20"
+            class="w-full rounded-2xl border border-slate-200/70 bg-white/80 py-3 pl-12 pr-4 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand/50 focus:ring-4 focus:ring-brand/10 dark:border-slate-800/70 dark:bg-slate-900/60 dark:text-slate-200"
             placeholder="搜索应用名 / 包名 / 标签，按回车键搜索"
             @keydown.enter="handleSearch"
             @focus="handleSearchFocus"
@@ -39,16 +35,12 @@
     </div>
     <div
       v-if="activeCategory !== 'home'"
+      class="text-sm text-slate-500 dark:text-slate-400"
       id="currentCount"
-      class="text-sm font-medium text-slate-500 dark:text-slate-400"
     >
-      共
-      <span class="tabular-nums text-slate-700 dark:text-slate-300">{{
-        appsCount
-      }}</span>
-      个应用
+      共 {{ appsCount }} 个应用
     </div>
-  </header>
+  </div>
 </template>
 
 <script setup lang="ts">

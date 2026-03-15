@@ -1,45 +1,40 @@
 <template>
   <div
-    class="fixed inset-x-4 bottom-4 z-40 rounded-2xl border border-slate-200/60 bg-white/95 shadow-xl shadow-slate-200/30 backdrop-blur-xl dark:border-slate-700/50 dark:bg-slate-900/95 dark:shadow-none sm:left-auto sm:right-6 sm:w-[22rem]"
+    class="fixed inset-x-4 bottom-4 z-40 rounded-3xl border border-slate-200/70 bg-white/95 shadow-2xl backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/90 sm:left-auto sm:right-6 sm:w-96"
   >
     <div
-      class="flex cursor-pointer items-center justify-between px-4 py-3.5 transition hover:bg-slate-50/80 dark:hover:bg-slate-800/50"
+      class="flex items-center justify-between px-5 py-4"
       @click="toggleExpand"
     >
-      <div class="flex items-center gap-2.5">
-        <span
-          class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand dark:bg-brand/20"
-        >
-          <i class="fas fa-download text-sm"></i>
-        </span>
-        <span class="text-sm font-semibold text-slate-800 dark:text-slate-100"
-          >下载队列</span
-        >
+      <div
+        class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200"
+      >
+        <i class="fas fa-download text-brand"></i>
+        <span>下载队列</span>
         <span
           v-if="downloads.length"
-          class="rounded-full bg-slate-200/80 px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-600 dark:bg-slate-700/80 dark:text-slate-300"
+          class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 dark:bg-slate-800/70 dark:text-slate-300"
         >
-          {{ activeDownloads }}/{{ downloads.length }}
+          ({{ activeDownloads }}/{{ downloads.length }})
         </span>
       </div>
-      <div class="flex items-center gap-1">
+      <div class="flex items-center gap-2">
         <button
           v-if="downloads.length"
           type="button"
-          class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/70 text-slate-500 transition hover:text-slate-900 dark:border-slate-700 dark:text-slate-400"
           title="清除已完成"
           @click.stop="clearCompleted"
         >
-          <i class="fas fa-broom text-sm"></i>
+          <i class="fas fa-broom"></i>
         </button>
         <button
           type="button"
-          class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/70 text-slate-500 transition hover:text-slate-900 dark:border-slate-700 dark:text-slate-400"
           @click.stop="toggleExpand"
-          :aria-expanded="isExpanded"
         >
           <i
-            class="fas text-sm transition-transform"
+            class="fas"
             :class="isExpanded ? 'fa-chevron-down' : 'fa-chevron-up'"
           ></i>
         </button>
@@ -54,22 +49,19 @@
       leave-from-class="opacity-100 translate-y-0"
       leave-to-class="opacity-0 -translate-y-2"
     >
-      <div
-        v-show="isExpanded"
-        class="max-h-80 overflow-y-auto border-t border-slate-200/60 px-3 py-3 scrollbar-muted dark:border-slate-700/50"
-      >
+      <div v-show="isExpanded" class="max-h-96 overflow-y-auto px-3 pb-4">
         <div
           v-if="downloads.length === 0"
-          class="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200/80 py-10 text-slate-500 dark:border-slate-700/80 dark:text-slate-400"
+          class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200/80 px-4 py-12 text-slate-500 dark:border-slate-800/80 dark:text-slate-400"
         >
-          <i class="fas fa-inbox text-2xl opacity-60"></i>
-          <p class="mt-2 text-sm font-medium">暂无下载任务</p>
+          <i class="fas fa-inbox text-3xl"></i>
+          <p class="mt-3 text-sm">暂无下载任务</p>
         </div>
         <div v-else class="space-y-2">
           <div
             v-for="download in downloads"
             :key="download.id"
-            class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200/60 bg-white/95 p-3 transition hover:border-brand/30 hover:bg-slate-50/80 dark:border-slate-700/50 dark:bg-slate-800/80 dark:hover:border-brand/40 dark:hover:bg-slate-800/90"
+            class="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/90 p-3 shadow-sm transition hover:border-brand/40 hover:shadow-lg dark:border-slate-800/70 dark:bg-slate-900"
             :class="
               download.status === 'failed'
                 ? 'border-rose-300/70 dark:border-rose-500/40'
@@ -78,7 +70,7 @@
             @click="showDownloadDetail(download)"
           >
             <div
-              class="h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-700/80 ring-1 ring-slate-200/50 dark:ring-slate-600/50"
+              class="h-12 w-12 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800"
             >
               <img
                 :src="download.icon"

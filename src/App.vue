@@ -1,21 +1,16 @@
 <template>
   <div
-    class="flex min-h-screen flex-col text-slate-900 transition-colors duration-300 dark:text-slate-100 lg:flex-row bg-[#f8fafc] dark:bg-[#0f172a]"
+    class="flex min-h-screen flex-col bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100 lg:flex-row"
   >
-    <!-- 背景装饰：浅色下为极淡渐变，深色下为 subtle grain -->
-    <div
-      class="pointer-events-none fixed inset-0 z-0 bg-gradient-to-br from-slate-50/80 via-transparent to-brand/[0.02] dark:from-slate-950/50 dark:to-transparent"
-      aria-hidden="true"
-    />
     <!-- 移动端侧边栏遮罩 -->
     <div
       v-if="isSidebarOpen"
-      class="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-md lg:hidden transition-opacity"
+      class="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm lg:hidden"
       @click="isSidebarOpen = false"
-    />
+    ></div>
 
     <aside
-      class="fixed inset-y-0 left-0 z-50 w-72 transform border-r border-slate-200/60 bg-white/90 px-5 py-6 shadow-xl shadow-slate-200/20 backdrop-blur-xl transition-transform duration-300 ease-out dark:border-slate-800/50 dark:bg-slate-900/95 dark:shadow-none lg:sticky lg:top-0 lg:flex lg:h-screen lg:translate-x-0 lg:flex-col lg:border-b-0 lg:shadow-none"
+      class="fixed inset-y-0 left-0 z-50 w-72 transform border-r border-slate-200/70 bg-white/95 px-5 py-6 backdrop-blur transition-transform duration-300 ease-in-out dark:border-slate-800/70 dark:bg-slate-900 lg:sticky lg:top-0 lg:flex lg:h-screen lg:translate-x-0 lg:flex-col lg:border-b-0"
       :class="
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       "
@@ -31,7 +26,7 @@
       />
     </aside>
 
-    <main class="relative z-10 flex-1 px-4 py-6 lg:px-10">
+    <main class="flex-1 px-4 py-6 lg:px-10">
       <AppHeader
         :search-query="searchQuery"
         :active-category="activeCategory"
@@ -400,16 +395,16 @@ const openDetail = async (app: App | Record<string, unknown>) => {
   if (fullApp.isMerged && (fullApp.sparkApp || fullApp.apmApp)) {
     const [sparkInstalled, apmInstalled] = await Promise.all([
       fullApp.sparkApp
-        ? (window.ipcRenderer.invoke("check-installed", {
+        ? window.ipcRenderer.invoke("check-installed", {
             pkgname: fullApp.sparkApp.pkgname,
             origin: "spark",
-          }) as Promise<boolean>)
+          }) as Promise<boolean>
         : Promise.resolve(false),
       fullApp.apmApp
-        ? (window.ipcRenderer.invoke("check-installed", {
+        ? window.ipcRenderer.invoke("check-installed", {
             pkgname: fullApp.apmApp.pkgname,
             origin: "apm",
-          }) as Promise<boolean>)
+          }) as Promise<boolean>
         : Promise.resolve(false),
     ]);
     if (sparkInstalled && !apmInstalled) {
@@ -422,9 +417,9 @@ const openDetail = async (app: App | Record<string, unknown>) => {
 
   const displayAppForScreenshots =
     fullApp.viewingOrigin !== undefined && fullApp.isMerged
-      ? ((fullApp.viewingOrigin === "spark"
+      ? (fullApp.viewingOrigin === "spark"
           ? fullApp.sparkApp
-          : fullApp.apmApp) ?? fullApp)
+          : fullApp.apmApp) ?? fullApp
       : fullApp;
 
   currentApp.value = fullApp;

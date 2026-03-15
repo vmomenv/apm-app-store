@@ -1,40 +1,36 @@
 <template>
-  <article
-    role="button"
-    tabindex="0"
+  <div
     @click="openDetail"
-    @keydown.enter="openDetail"
-    @keydown.space.prevent="openDetail"
-    class="group flex h-full cursor-pointer gap-4 rounded-2xl border border-slate-200/60 bg-white/95 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-md hover:shadow-slate-200/50 dark:border-slate-700/50 dark:bg-slate-800/70 dark:hover:border-brand/40 dark:hover:shadow-slate-900/50"
+    class="group flex h-full cursor-pointer gap-4 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm transition hover:-translate-y-1 hover:border-brand/50 hover:shadow-lg dark:border-slate-800/60 dark:bg-slate-900/60"
   >
     <div
-      class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-slate-100 to-slate-200/80 shadow-inner ring-1 ring-slate-200/50 dark:from-slate-700 dark:to-slate-800 dark:ring-slate-600/30"
+      class="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-b from-slate-100 to-slate-200 shadow-inner dark:from-slate-800 dark:to-slate-700"
     >
       <img
         ref="iconImg"
         :src="loadedIcon"
-        alt=""
+        alt="icon"
         :class="[
           'h-full w-full object-cover transition-opacity duration-300',
           isLoaded ? 'opacity-100' : 'opacity-0',
         ]"
       />
     </div>
-    <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-      <div class="flex flex-wrap items-center gap-2">
-        <h3
+    <div class="flex flex-1 flex-col gap-1 overflow-hidden">
+      <div class="flex items-center gap-2">
+        <div
           class="truncate text-base font-semibold text-slate-900 dark:text-white"
         >
           {{ app.name || "" }}
-        </h3>
+        </div>
         <span
           :class="[
-            'shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+            'rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-sm',
             app.isMerged
-              ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-300'
+              ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
               : app.origin === 'spark'
-                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                : 'bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-300',
+                ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
+                : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
           ]"
         >
           {{
@@ -46,18 +42,14 @@
           }}
         </span>
       </div>
-      <p
-        class="truncate text-xs font-medium text-slate-500 dark:text-slate-400"
-      >
+      <div class="text-sm text-slate-500 dark:text-slate-400">
         {{ app.pkgname || "" }} · {{ app.version || "" }}
-      </p>
-      <p
-        class="line-clamp-2 text-sm leading-snug text-slate-500 dark:text-slate-400"
-      >
+      </div>
+      <div class="text-sm text-slate-500 dark:text-slate-400">
         {{ description }}
-      </p>
+      </div>
     </div>
-  </article>
+  </div>
 </template>
 
 <script setup lang="ts">

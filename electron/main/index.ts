@@ -64,7 +64,6 @@ if (!app.requestSingleInstanceLock()) {
 let win: BrowserWindow | null = null;
 const preload = path.join(__dirname, "../preload/index.mjs");
 const indexHtml = path.join(RENDERER_DIST, "index.html");
-
 /** 与项目 package.json 一致的版本号：打包用 app.getVersion()，未打包时读 package.json */
 function getAppVersion(): string {
   if (app.isPackaged) return app.getVersion();
@@ -95,8 +94,10 @@ function getStoreFilterFromArgv(): "spark" | "apm" | "both" {
   return "both";
 }
 
+
 ipcMain.handle("get-store-filter", (): "spark" | "apm" | "both" =>
   getStoreFilterFromArgv(),
+
 );
 
 async function createWindow() {
@@ -212,7 +213,7 @@ app.whenReady().then(() => {
   });
   createWindow();
   handleCommandLine(process.argv);
-  // 启动后执行一次遥测（仅 Linux，不阻塞）
+    // 启动后执行一次遥测（仅 Linux，不阻塞）
   sendTelemetryOnce(getAppVersion());
 });
 
@@ -272,6 +273,7 @@ function getTrayIconPath(): string | null {
 /** 16x16 透明 PNG，用作托盘无图标时的替代 */
 const FALLBACK_TRAY_PNG =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHklEQVQ4T2NkYGD4z0ABYBwNwMAwGoChNQAAAABJRU5ErkJggg==";
+
 
 function getTrayImage():
   | string
