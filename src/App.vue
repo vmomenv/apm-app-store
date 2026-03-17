@@ -672,11 +672,13 @@ const refreshUpgradableApps = async () => {
 };
 
 const toggleAllUpgrades = () => {
-  const updatableApps = upgradableApps.value.filter((app) => !app.isIgnored);
+  const updatableApps = upgradableApps.value.filter(
+    (app) => !(app as UpdateAppItem).isIgnored,
+  );
   const shouldSelectAll =
     !hasSelectedUpgrades.value || updatableApps.some((app) => !app.selected);
   upgradableApps.value = upgradableApps.value.map((app) => {
-    if (app.isIgnored) return app;
+    if ((app as UpdateAppItem).isIgnored) return app;
     return {
       ...app,
       selected: shouldSelectAll ? true : false,
@@ -730,12 +732,6 @@ const upgradeSingleApp = (app: UpdateAppItem) => {
   // Override specific properties to match crossUpgrade logic correctly
   minimalApp.version = app.newVersion || minimalApp.version;
   minimalApp.origin = app.origin || "apm";
-  if (app.isCrossUpgrade) {
-    // Temporary pass-through flag or payload modifier if handleUpgrade supports it
-    // Or we handle download queue item correctly in processInstall.ts
-    // For now we just pass minimalApp, and queue-install event handles `origin: apm` and `isCrossUpgrade`
-    // by using an extra parameter or passing it via downItem options
-  }
 
   // A slight modification: if it's crossUpgrade, we could set upgradeOnly to false to use the standard installer route.
   // Actually handleUpgrade already sends download payload, we just need to adapt it.
@@ -750,7 +746,7 @@ const upgradeSingleApp = (app: UpdateAppItem) => {
 
 const upgradeSelectedApps = () => {
   const selectedApps = upgradableApps.value.filter(
-    (app) => app.selected && !app.isIgnored,
+    (app) => app.selected && !(app as UpdateAppItem).isIgnored,
   );
   selectedApps.forEach((app) => {
     upgradeSingleApp(app);
