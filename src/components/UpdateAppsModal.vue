@@ -87,7 +87,10 @@
               :key="app.pkgname"
               class="flex flex-col gap-3 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm dark:border-slate-800/70 dark:bg-slate-900/70 sm:flex-row sm:items-center sm:gap-4"
             >
-              <div class="flex items-start gap-3" :class="{ 'opacity-50': app.isIgnored }">
+              <div
+                class="flex items-start gap-3"
+                :class="{ 'opacity-50': app.isIgnored }"
+              >
                 <input
                   type="checkbox"
                   class="mt-1 h-4 w-4 rounded border-slate-300 accent-brand focus:ring-brand"
@@ -97,7 +100,11 @@
                 <div>
                   <p class="font-semibold text-slate-900 dark:text-white">
                     {{ app.pkgname }}
-                    <span v-if="app.isCrossUpgrade" class="ml-2 text-xs text-brand bg-brand/10 px-2 py-0.5 rounded-md">迁移至 APM</span>
+                    <span
+                      v-if="app.isCrossUpgrade"
+                      class="ml-2 text-xs text-brand bg-brand/10 px-2 py-0.5 rounded-md"
+                      >迁移至 APM</span
+                    >
                   </p>
                   <p class="text-sm text-slate-500 dark:text-slate-400">
                     当前 {{ app.currentVersion || "-" }} · 更新至
@@ -118,11 +125,17 @@
                 <button
                   type="button"
                   class="inline-flex items-center gap-2 rounded-2xl border border-slate-200/70 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700"
-                  :class="app.isIgnored ? 'text-brand dark:text-brand bg-brand/5 dark:bg-brand/10' : 'text-slate-500 dark:text-slate-400'"
+                  :class="
+                    app.isIgnored
+                      ? 'text-brand dark:text-brand bg-brand/5 dark:bg-brand/10'
+                      : 'text-slate-500 dark:text-slate-400'
+                  "
                   :title="app.isIgnored ? '取消忽略此更新' : '忽略此版本更新'"
                   @click.prevent="$emit('toggle-ignore', app, !app.isIgnored)"
                 >
-                  <i :class="app.isIgnored ? 'fas fa-eye' : 'fas fa-eye-slash'"></i>
+                  <i
+                    :class="app.isIgnored ? 'fas fa-eye' : 'fas fa-eye-slash'"
+                  ></i>
                   {{ app.isIgnored ? "已忽略" : "忽略" }}
                 </button>
               </div>

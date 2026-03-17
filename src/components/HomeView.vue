@@ -13,7 +13,6 @@
     >
       {{ error }}
     </div>
-    <div v-else-if="error" class="text-center text-rose-600">{{ error }}</div>
     <div v-else>
       <div class="grid gap-4 auto-fit-grid">
         <a

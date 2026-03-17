@@ -651,20 +651,18 @@ const refreshUpgradableApps = async () => {
       return;
     }
 
-    upgradableApps.value = (result.apps || []).map(
-      (app: UpdateAppItem) => ({
-        ...app,
-        name: app.pkgname || "",
-        pkgname: app.pkgname || "",
-        version: app.newVersion || "",
-        category: "unknown",
-        selected: false,
-        upgrading: false,
-        isIgnored: app.isIgnored || false,
-        isCrossUpgrade: app.isCrossUpgrade || false,
-        origin: app.type || app.origin || "apm",
-      }),
-    );
+    upgradableApps.value = (result.apps || []).map((app: UpdateAppItem) => ({
+      ...app,
+      name: app.pkgname || "",
+      pkgname: app.pkgname || "",
+      version: app.newVersion || "",
+      category: "unknown",
+      selected: false,
+      upgrading: false,
+      isIgnored: app.isIgnored || false,
+      isCrossUpgrade: app.isCrossUpgrade || false,
+      origin: app.type || app.origin || "apm",
+    }));
   } catch (error: unknown) {
     upgradableApps.value = [];
     updateError.value = (error as Error)?.message || "检查更新失败";
@@ -674,10 +672,9 @@ const refreshUpgradableApps = async () => {
 };
 
 const toggleAllUpgrades = () => {
-  const updatableApps = upgradableApps.value.filter(app => !app.isIgnored);
+  const updatableApps = upgradableApps.value.filter((app) => !app.isIgnored);
   const shouldSelectAll =
-    !hasSelectedUpgrades.value ||
-    updatableApps.some((app) => !app.selected);
+    !hasSelectedUpgrades.value || updatableApps.some((app) => !app.selected);
   upgradableApps.value = upgradableApps.value.map((app) => {
     if (app.isIgnored) return app;
     return {
@@ -689,7 +686,11 @@ const toggleAllUpgrades = () => {
 
 const toggleIgnoreApp = async (app: UpdateAppItem, ignore: boolean) => {
   try {
-    const res = await window.ipcRenderer.invoke("toggle-ignore-update", app.pkgname, ignore);
+    const res = await window.ipcRenderer.invoke(
+      "toggle-ignore-update",
+      app.pkgname,
+      ignore,
+    );
     if (res?.success) {
       app.isIgnored = ignore;
       if (ignore) app.selected = false;
@@ -704,25 +705,27 @@ const upgradeSingleApp = (app: UpdateAppItem) => {
   const target = apps.value.find((a) => a.pkgname === app.pkgname);
 
   // Construct a minimal app object to pass to the upgrade handler
-  let minimalApp: App = target ? { ...target } : {
-    name: app.pkgname,
-    pkgname: app.pkgname,
-    version: app.newVersion || "",
-    category: "unknown",
-    tags: "",
-    more: "",
-    filename: "",
-    torrent_address: "",
-    author: "",
-    contributor: "",
-    website: "",
-    update: "",
-    size: "",
-    img_urls: [],
-    icons: "",
-    origin: app.origin || "apm", // Default to APM or type
-    currentStatus: "installed",
-  };
+  let minimalApp: App = target
+    ? { ...target }
+    : {
+        name: app.pkgname,
+        pkgname: app.pkgname,
+        version: app.newVersion || "",
+        category: "unknown",
+        tags: "",
+        more: "",
+        filename: "",
+        torrent_address: "",
+        author: "",
+        contributor: "",
+        website: "",
+        update: "",
+        size: "",
+        img_urls: [],
+        icons: "",
+        origin: app.origin || "apm", // Default to APM or type
+        currentStatus: "installed",
+      };
 
   // Override specific properties to match crossUpgrade logic correctly
   minimalApp.version = app.newVersion || minimalApp.version;
@@ -739,13 +742,16 @@ const upgradeSingleApp = (app: UpdateAppItem) => {
 
   // Directly add to downloadQueue here to send `isCrossUpgrade` properly, or modify processInstall to handle it.
   // Since we don't want to change too much of processInstall, let's inject a custom property.
-  (minimalApp as any).isCrossUpgrade = app.isCrossUpgrade;
+  const appWithExtras = minimalApp as App & { isCrossUpgrade?: boolean };
+  appWithExtras.isCrossUpgrade = app.isCrossUpgrade;
 
   handleUpgrade(minimalApp);
 };
 
 const upgradeSelectedApps = () => {
-  const selectedApps = upgradableApps.value.filter((app) => app.selected && !app.isIgnored);
+  const selectedApps = upgradableApps.value.filter(
+    (app) => app.selected && !app.isIgnored,
+  );
   selectedApps.forEach((app) => {
     upgradeSingleApp(app);
   });

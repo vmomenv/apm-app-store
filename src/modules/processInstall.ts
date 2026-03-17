@@ -103,9 +103,11 @@ export const handleUpgrade = (app: App) => {
   downloadIdCounter += 1;
   const arch = window.apm_store.arch || "amd64";
   const finalArch = app.origin === "spark" ? `${arch}-store` : `${arch}-apm`;
-  const isCrossUpgrade = (app as any).isCrossUpgrade || false;
 
-  const download: DownloadItem = {
+  const appWithExtras = app as App & { isCrossUpgrade?: boolean };
+  const isCrossUpgrade = appWithExtras.isCrossUpgrade || false;
+
+  const download: DownloadItem & { isCrossUpgrade?: boolean } = {
     id: downloadIdCounter,
     name: app.name,
     pkgname: app.pkgname,
@@ -123,8 +125,11 @@ export const handleUpgrade = (app: App) => {
     retry: false,
     upgradeOnly: !isCrossUpgrade,
     origin: app.origin,
-    ...((isCrossUpgrade) ? { isCrossUpgrade: true } : {})
   };
+
+  if (isCrossUpgrade) {
+    download.isCrossUpgrade = true;
+  }
 
   downloads.value.push(download);
   window.ipcRenderer.send("queue-install", JSON.stringify(download));
