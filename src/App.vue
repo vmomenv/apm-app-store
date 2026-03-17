@@ -124,6 +124,7 @@
       @toggle-all="toggleAllUpgrades"
       @upgrade-selected="upgradeSelectedApps"
       @upgrade-one="upgradeSingleApp"
+      @toggle-ignore="toggleIgnoreApp"
     />
 
     <UninstallConfirmModal
@@ -395,16 +396,16 @@ const openDetail = async (app: App | Record<string, unknown>) => {
   if (fullApp.isMerged && (fullApp.sparkApp || fullApp.apmApp)) {
     const [sparkInstalled, apmInstalled] = await Promise.all([
       fullApp.sparkApp
-        ? window.ipcRenderer.invoke("check-installed", {
+        ? (window.ipcRenderer.invoke("check-installed", {
             pkgname: fullApp.sparkApp.pkgname,
             origin: "spark",
-          }) as Promise<boolean>
+          }) as Promise<boolean>)
         : Promise.resolve(false),
       fullApp.apmApp
-        ? window.ipcRenderer.invoke("check-installed", {
+        ? (window.ipcRenderer.invoke("check-installed", {
             pkgname: fullApp.apmApp.pkgname,
             origin: "apm",
-          }) as Promise<boolean>
+          }) as Promise<boolean>)
         : Promise.resolve(false),
     ]);
     if (sparkInstalled && !apmInstalled) {
@@ -417,9 +418,9 @@ const openDetail = async (app: App | Record<string, unknown>) => {
 
   const displayAppForScreenshots =
     fullApp.viewingOrigin !== undefined && fullApp.isMerged
-      ? (fullApp.viewingOrigin === "spark"
+      ? ((fullApp.viewingOrigin === "spark"
           ? fullApp.sparkApp
-          : fullApp.apmApp) ?? fullApp
+          : fullApp.apmApp) ?? fullApp)
       : fullApp;
 
   currentApp.value = fullApp;
@@ -611,15 +612,8 @@ const nextScreen = () => {
   }
 };
 
-const handleUpdate = async () => {
-  try {
-    const result = await window.ipcRenderer.invoke("run-update-tool");
-    if (!result || !result.success) {
-      logger.warn(`启动更新工具失败: ${result?.message || "未知错误"}`);
-    }
-  } catch (error) {
-    logger.error(`调用更新工具时出错: ${error}`);
-  }
+const handleUpdate = () => {
+  openUpdateModal();
 };
 
 const handleOpenInstallSettings = async () => {
@@ -657,20 +651,18 @@ const refreshUpgradableApps = async () => {
       return;
     }
 
-    upgradableApps.value = (result.apps || []).map(
-      (app: Record<string, string>) => ({
-        ...app,
-        // Map properties if needed or assume main matches App interface except field names might differ
-        // For now assuming result.apps returns objects compatible with App for core fields,
-        // but let's normalize just in case if main returns different structure.
-        name: app.name || app.Name || "",
-        pkgname: app.pkgname || app.Pkgname || "",
-        version: app.newVersion || app.version || "",
-        category: app.category || "unknown",
-        selected: false,
-        upgrading: false,
-      }),
-    );
+    upgradableApps.value = (result.apps || []).map((app: UpdateAppItem) => ({
+      ...app,
+      name: app.pkgname || "",
+      pkgname: app.pkgname || "",
+      version: app.newVersion || "",
+      category: "unknown",
+      selected: false,
+      upgrading: false,
+      isIgnored: app.isIgnored || false,
+      isCrossUpgrade: app.isCrossUpgrade || false,
+      origin: app.type || app.origin || "apm",
+    }));
   } catch (error: unknown) {
     upgradableApps.value = [];
     updateError.value = (error as Error)?.message || "检查更新失败";
@@ -680,48 +672,82 @@ const refreshUpgradableApps = async () => {
 };
 
 const toggleAllUpgrades = () => {
+  const updatableApps = upgradableApps.value.filter(
+    (app) => !(app as UpdateAppItem).isIgnored,
+  );
   const shouldSelectAll =
-    !hasSelectedUpgrades.value ||
-    upgradableApps.value.some((app) => !app.selected);
-  upgradableApps.value = upgradableApps.value.map((app) => ({
-    ...app,
-    selected: shouldSelectAll ? true : false,
-  }));
+    !hasSelectedUpgrades.value || updatableApps.some((app) => !app.selected);
+  upgradableApps.value = upgradableApps.value.map((app) => {
+    if ((app as UpdateAppItem).isIgnored) return app;
+    return {
+      ...app,
+      selected: shouldSelectAll ? true : false,
+    };
+  });
 };
 
-const upgradeSingleApp = (app: UpdateAppItem) => {
-  if (!app?.pkgname) return;
-  const target = apps.value.find((a) => a.pkgname === app.pkgname);
-  if (target) {
-    handleUpgrade(target);
-  } else {
-    // If we can't find it in the list (e.g. category not loaded?), use the info we have
-    // But handleUpgrade expects App. Let's try to construct minimal App
-    let minimalApp: App = {
-      name: app.pkgname,
-      pkgname: app.pkgname,
-      version: app.newVersion || "",
-      category: "unknown",
-      tags: "",
-      more: "",
-      filename: "",
-      torrent_address: "",
-      author: "",
-      contributor: "",
-      website: "",
-      update: "",
-      size: "",
-      img_urls: [],
-      icons: "",
-      origin: "apm", // Default to APM if unknown, or try to guess
-      currentStatus: "installed",
-    };
-    handleUpgrade(minimalApp);
+const toggleIgnoreApp = async (app: UpdateAppItem, ignore: boolean) => {
+  try {
+    const res = await window.ipcRenderer.invoke(
+      "toggle-ignore-update",
+      app.pkgname,
+      ignore,
+    );
+    if (res?.success) {
+      app.isIgnored = ignore;
+      if (ignore) app.selected = false;
+    }
+  } catch (e) {
+    logger.error("toggleIgnoreApp failed: " + String(e));
   }
 };
 
+const upgradeSingleApp = (app: UpdateAppItem) => {
+  if (!app?.pkgname || app.isIgnored) return;
+  const target = apps.value.find((a) => a.pkgname === app.pkgname);
+
+  // Construct a minimal app object to pass to the upgrade handler
+  let minimalApp: App = target
+    ? { ...target }
+    : {
+        name: app.pkgname,
+        pkgname: app.pkgname,
+        version: app.newVersion || "",
+        category: "unknown",
+        tags: "",
+        more: "",
+        filename: "",
+        torrent_address: "",
+        author: "",
+        contributor: "",
+        website: "",
+        update: "",
+        size: "",
+        img_urls: [],
+        icons: "",
+        origin: app.origin || "apm", // Default to APM or type
+        currentStatus: "installed",
+      };
+
+  // Override specific properties to match crossUpgrade logic correctly
+  minimalApp.version = app.newVersion || minimalApp.version;
+  minimalApp.origin = app.origin || "apm";
+
+  // A slight modification: if it's crossUpgrade, we could set upgradeOnly to false to use the standard installer route.
+  // Actually handleUpgrade already sends download payload, we just need to adapt it.
+
+  // Directly add to downloadQueue here to send `isCrossUpgrade` properly, or modify processInstall to handle it.
+  // Since we don't want to change too much of processInstall, let's inject a custom property.
+  const appWithExtras = minimalApp as App & { isCrossUpgrade?: boolean };
+  appWithExtras.isCrossUpgrade = app.isCrossUpgrade;
+
+  handleUpgrade(minimalApp);
+};
+
 const upgradeSelectedApps = () => {
-  const selectedApps = upgradableApps.value.filter((app) => app.selected);
+  const selectedApps = upgradableApps.value.filter(
+    (app) => app.selected && !(app as UpdateAppItem).isIgnored,
+  );
   selectedApps.forEach((app) => {
     upgradeSingleApp(app);
   });
