@@ -120,6 +120,10 @@ export interface UpdateAppItem {
   newVersion?: string;
   selected?: boolean;
   upgrading?: boolean;
+  isIgnored?: boolean;
+  isCrossUpgrade?: boolean;
+  origin?: "spark" | "apm";
+  type?: "spark" | "apm";
 }
 
 /**************Below are type from main process ********************/

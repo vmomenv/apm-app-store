@@ -1,5 +1,5 @@
 <template>
-   <div class="space-y-8">
+  <div class="space-y-8">
     <div
       v-if="loading"
       class="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-slate-400"

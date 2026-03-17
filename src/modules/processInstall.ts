@@ -103,6 +103,7 @@ export const handleUpgrade = (app: App) => {
   downloadIdCounter += 1;
   const arch = window.apm_store.arch || "amd64";
   const finalArch = app.origin === "spark" ? `${arch}-store` : `${arch}-apm`;
+  const isCrossUpgrade = (app as any).isCrossUpgrade || false;
 
   const download: DownloadItem = {
     id: downloadIdCounter,
@@ -120,8 +121,9 @@ export const handleUpgrade = (app: App) => {
     logs: [{ time: Date.now(), message: "开始更新..." }],
     source: "APM Update",
     retry: false,
-    upgradeOnly: true,
+    upgradeOnly: !isCrossUpgrade,
     origin: app.origin,
+    ...((isCrossUpgrade) ? { isCrossUpgrade: true } : {})
   };
 
   downloads.value.push(download);

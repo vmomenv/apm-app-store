@@ -1,6 +1,7 @@
 import { BrowserWindow, dialog, ipcMain, WebContents } from "electron";
 import { spawn, ChildProcess, exec } from "node:child_process";
 import { promisify } from "node:util";
+import os from "node:os";
 import fs from "node:fs";
 import path from "node:path";
 import pino from "pino";
@@ -128,12 +129,38 @@ const runInstallApm = async (superUserCmd: string): Promise<boolean> => {
   return true;
 };
 
-const parseUpgradableList = (output: string) => {
+const compareVersions = async (
+  ver1: string,
+  op: string,
+  ver2: string,
+): Promise<boolean> => {
+  try {
+    const cmd = "dpkg";
+    const args = ["--compare-versions", ver1, op, ver2];
+    let { code } = await runCommandCapture(cmd, args);
+
+    if (code !== 0 && code !== 1) {
+      // Fallback to amber-pm-debug dpkg if dpkg is not available or errors out unexpectedly
+      const fallbackCode = await runCommandCapture("amber-pm-debug", [
+        "dpkg",
+        ...args,
+      ]);
+      code = fallbackCode.code;
+    }
+
+    return code === 0;
+  } catch (err) {
+    logger.error(`Version comparison failed: ${err}`);
+    return false;
+  }
+};
+
+const parseAptssUpgradableList = (output: string) => {
   const apps: Array<{
     pkgname: string;
     newVersion: string;
     currentVersion: string;
-    raw: string;
+    origin: "spark" | "apm";
   }> = [];
   const lines = output.split("\n");
   for (const line of lines) {
@@ -158,9 +185,67 @@ const parseUpgradableList = (output: string) => {
       currentMatch?.[1] || currentToken.replace("[", "").replace("]", "");
 
     if (!pkgname) continue;
-    apps.push({ pkgname, newVersion, currentVersion, raw: trimmed });
+    apps.push({ pkgname, newVersion, currentVersion, origin: "spark" });
   }
   return apps;
+};
+
+const parseApmUpgradableList = (output: string) => {
+  const apps: Array<{
+    pkgname: string;
+    newVersion: string;
+    currentVersion: string;
+    origin: "spark" | "apm";
+  }> = [];
+  const lines = output.split("\n");
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (trimmed.startsWith("Listing")) continue;
+    if (trimmed.startsWith("[INFO]")) continue;
+    if (trimmed.startsWith("警告")) continue;
+
+    // Remove ANSI escape codes
+    // eslint-disable-next-line no-control-regex
+    const cleanLine = trimmed.replace(/\x1b\[[0-9;]*m/g, "");
+
+    if (cleanLine.includes("=") && !cleanLine.includes("/")) continue;
+    if (!cleanLine.includes("/")) continue;
+
+    const tokens = cleanLine.split(/\s+/);
+    if (tokens.length < 2) continue;
+    const pkgToken = tokens[0];
+    const pkgname = pkgToken.split("/")[0];
+    const newVersion = tokens[1] || "";
+    const currentMatch = cleanLine.match(
+      /\[(?:upgradable from|from):\s*([^\]\s]+)\]/i,
+    );
+    const currentToken = tokens[5] || "";
+    const currentVersion =
+      currentMatch?.[1] || currentToken.replace("[", "").replace("]", "");
+
+    if (!pkgname) continue;
+    apps.push({ pkgname, newVersion, currentVersion, origin: "apm" });
+  }
+  return apps;
+};
+
+const getIgnoredUpdates = (): string[] => {
+  try {
+    const ignoredPath = path.join(
+      os.homedir(),
+      ".config",
+      "spark-store",
+      "ignored_updates.json",
+    );
+    if (fs.existsSync(ignoredPath)) {
+      const data = fs.readFileSync(ignoredPath, "utf8");
+      return JSON.parse(data) as string[];
+    }
+  } catch (err) {
+    logger.error(`Failed to read ignored updates: ${err}`);
+  }
+  return [];
 };
 
 // Listen for download requests from renderer process
@@ -251,7 +336,8 @@ ipcMain.on("queue-install", async (event, download_json) => {
           type: "info",
           title: "APM 安装成功",
           message: "恭喜您，APM 已成功安装",
-          detail: "APM 应用需重启后方可展示和使用，若完成安装后无法在应用列表中展示，请重启电脑后继续。",
+          detail:
+            "APM 应用需重启后方可展示和使用，若完成安装后无法在应用列表中展示，请重启电脑后继续。",
           buttons: ["确定"],
           defaultId: 0,
         });
@@ -261,22 +347,17 @@ ipcMain.on("queue-install", async (event, download_json) => {
 
   if (origin === "spark") {
     // Spark Store logic
-    if (upgradeOnly) {
-      execCommand = "pkexec";
-      execParams.push("spark-update-tool", pkgname);
-    } else {
-      execCommand = superUserCmd || SHELL_CALLER_PATH;
-      if (superUserCmd) execParams.push(SHELL_CALLER_PATH);
+    execCommand = superUserCmd || SHELL_CALLER_PATH;
+    if (superUserCmd) execParams.push(SHELL_CALLER_PATH);
 
-      if (metalinkUrl && filename) {
-        execParams.push(
-          "ssinstall",
-          `${downloadDir}/${filename}`,
-          "--delete-after-install",
-        );
-      } else {
-        execParams.push("aptss", "install", "-y", pkgname);
-      }
+    if (metalinkUrl && filename) {
+      execParams.push(
+        "ssinstall",
+        `${downloadDir}/${filename}`,
+        "--delete-after-install",
+      );
+    } else {
+      execParams.push("aptss", "install", "-y", pkgname);
     }
   } else {
     // APM Store logic
@@ -306,6 +387,21 @@ ipcMain.on("queue-install", async (event, download_json) => {
     filename,
     origin: origin || "apm",
   };
+
+  // If it's a cross-upgrade (APM version > Spark version), we must remove Spark app first.
+  // We can inject a remove command before the install phase in processNextInQueue,
+  // or simply execute the remove synchronously/asynchronously before launching the install child.
+  if (download.isCrossUpgrade && origin === "apm") {
+    const removeCommand = superUserCmd || SHELL_CALLER_PATH;
+    const removeParams = superUserCmd ? [SHELL_CALLER_PATH, "aptss", "remove", "-y", pkgname] : ["aptss", "remove", "-y", pkgname];
+
+    // To cleanly integrate, we can wrap the install process to first spawn the remove process
+    // This will be handled in `processNextInQueue` by checking `download.isCrossUpgrade`
+    (task as any).isCrossUpgrade = true;
+    (task as any).removeCommand = removeCommand;
+    (task as any).removeParams = removeParams;
+  }
+
   tasks.set(id, task);
   if (idle) processNextInQueue();
 });
@@ -419,6 +515,45 @@ async function processNextInQueue() {
 
     // 2. Install Phase
     sendStatus("installing");
+
+    // Optional: Cross Upgrade Remove Phase
+    if ((task as any).isCrossUpgrade) {
+      const rmCmdString = `${(task as any).removeCommand} ${(task as any).removeParams.join(" ")}`;
+      sendLog(`执行卸载旧版: ${rmCmdString}`);
+      logger.info(`跨平台更新：启动卸载: ${rmCmdString}`);
+
+      await new Promise<{ code: number; stdout: string; stderr: string }>((resolve, reject) => {
+        const child = spawn((task as any).removeCommand, (task as any).removeParams, {
+          shell: false,
+          env: process.env,
+        });
+
+        // Use the same install_process ref so we can cancel it if needed
+        task.install_process = child;
+
+        let stdout = "";
+        let stderr = "";
+
+        child.stdout.on("data", (d) => {
+          const s = d.toString();
+          stdout += s;
+          sendLog(s);
+        });
+
+        child.stderr.on("data", (d) => {
+          const s = d.toString();
+          stderr += s;
+          sendLog(s);
+        });
+
+        child.on("close", (code) => {
+          resolve({ code: code ?? -1, stdout, stderr });
+        });
+        child.on("error", (err) => {
+          reject(err);
+        });
+      });
+    }
 
     const cmdString = `${task.execCommand} ${task.execParams.join(" ")}`;
     sendLog(`执行安装: ${cmdString}`);
@@ -652,24 +787,95 @@ ipcMain.on("remove-installed", async (_event, payload) => {
 });
 
 ipcMain.handle("list-upgradable", async () => {
-  const { code, stdout, stderr } = await runCommandCapture(SHELL_CALLER_PATH, [
-    "aptss",
-    "list",
-    "--upgradable",
+  logger.info("Listing upgradable apps...");
+
+  const [aptssRes, apmRes] = await Promise.all([
+    runCommandCapture(SHELL_CALLER_PATH, ["aptss", "list", "--upgradable"]),
+    runCommandCapture("apm", ["list", "--upgradable"])
   ]);
-  if (code !== 0) {
-    logger.error(`list-upgradable failed: ${stderr || stdout}`);
-    return {
-      success: false,
-      message: stderr || stdout || `list-upgradable failed with code ${code}`,
-      apps: [],
-    };
+
+  if (aptssRes.code !== 0) {
+    logger.error(`aptss list-upgradable failed: ${aptssRes.stderr || aptssRes.stdout}`);
   }
 
-  const apps = parseUpgradableList(stdout);
-  return { success: true, apps };
+  const aptssApps = aptssRes.code === 0 ? parseAptssUpgradableList(aptssRes.stdout) : [];
+  const apmApps = apmRes.code === 0 ? parseApmUpgradableList(apmRes.stdout) : [];
+
+  const ignoredUpdates = getIgnoredUpdates();
+  const mergedAppsMap = new Map<string, any>();
+
+  for (const app of aptssApps) {
+    mergedAppsMap.set(app.pkgname, {
+      ...app,
+      isIgnored: ignoredUpdates.includes(app.pkgname),
+      isCrossUpgrade: false,
+      type: "spark"
+    });
+  }
+
+  for (const app of apmApps) {
+    const existing = mergedAppsMap.get(app.pkgname);
+    if (existing) {
+      // Compare versions
+      const apmIsGreater = await compareVersions(app.newVersion, "gt", existing.newVersion);
+      if (apmIsGreater) {
+        // APM version is strictly higher, transition to APM
+        mergedAppsMap.set(app.pkgname, {
+          ...app,
+          isIgnored: ignoredUpdates.includes(app.pkgname),
+          isCrossUpgrade: true, // Needs remove then install
+          type: "apm"
+        });
+      } else {
+        // Spark version is higher or equal, keep them separate or let user choose.
+        // For simplicity, if APM <= Spark, we keep both in the list. To do this we need to alter the key.
+        mergedAppsMap.set(`${app.pkgname}-apm`, {
+          ...app,
+          isIgnored: ignoredUpdates.includes(app.pkgname),
+          isCrossUpgrade: false,
+          type: "apm"
+        });
+      }
+    } else {
+      mergedAppsMap.set(app.pkgname, {
+        ...app,
+        isIgnored: ignoredUpdates.includes(app.pkgname),
+        isCrossUpgrade: false,
+        type: "apm"
+      });
+    }
+  }
+
+  return { success: true, apps: Array.from(mergedAppsMap.values()) };
 });
 
+ipcMain.handle("toggle-ignore-update", async (_event, pkgname: string, ignore: boolean) => {
+  try {
+    const configDir = path.join(os.homedir(), ".config", "spark-store");
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+    const ignoredPath = path.join(configDir, "ignored_updates.json");
+
+    let ignored: string[] = [];
+    if (fs.existsSync(ignoredPath)) {
+      const data = fs.readFileSync(ignoredPath, "utf8");
+      ignored = JSON.parse(data) as string[];
+    }
+
+    if (ignore) {
+      if (!ignored.includes(pkgname)) ignored.push(pkgname);
+    } else {
+      ignored = ignored.filter((p) => p !== pkgname);
+    }
+
+    fs.writeFileSync(ignoredPath, JSON.stringify(ignored), "utf8");
+    return { success: true };
+  } catch (err) {
+    logger.error(`Failed to toggle ignore update: ${err}`);
+    return { success: false, message: String(err) };
+  }
+});
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ipcMain.handle("uninstall-installed", async (_event, payload: any) => {

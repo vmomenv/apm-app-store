@@ -6,7 +6,7 @@
       @click="handleUpdate"
       title="检查可更新的软件包列表"
     >
-      <i class="fas fa-sync-alt"></i>
+      <i class="fas fa-arrow-up"></i>
       <span>软件更新</span>
     </button>
     <button
