@@ -932,11 +932,7 @@ ipcMain.handle("list-upgradable", async () => {
       "APT::Get::List-Cleanup=0",
     ]);
   } else {
-    aptssRes = await runCommandCapture(SHELL_CALLER_PATH, [
-      "aptss",
-      "list",
-      "--upgradable",
-    ]);
+    aptssRes = await runCommandCapture("aptss", ["list", "--upgradable"]);
   }
 
   const apmRes = await runCommandCapture("apm", ["list", "--upgradable"]);
