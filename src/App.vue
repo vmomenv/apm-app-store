@@ -731,7 +731,10 @@ const upgradeSingleApp = (app: UpdateAppItem) => {
 
   // Override specific properties to match crossUpgrade logic correctly
   minimalApp.version = app.newVersion || minimalApp.version;
-  minimalApp.origin = app.origin || "apm";
+  minimalApp.origin = app.type || app.origin || "apm";
+  minimalApp.size = app.size || minimalApp.size;
+  minimalApp.torrent_address = app.metalinkUrl || minimalApp.torrent_address;
+  minimalApp.filename = app.filename || minimalApp.filename;
 
   // A slight modification: if it's crossUpgrade, we could set upgradeOnly to false to use the standard installer route.
   // Actually handleUpgrade already sends download payload, we just need to adapt it.

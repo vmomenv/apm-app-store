@@ -208,6 +208,127 @@ const parseApmUpgradableList = (output: string) => {
   return apps;
 };
 
+// Fetch download URL, size, and filename from apt download --print-uris
+const getSparkAppDownloadInfo = async (pkgname: string) => {
+  const aptFastConf =
+    "/opt/durapps/spark-store/bin/apt-fast-conf/aptss-apt.conf";
+  const sourcesList =
+    "/opt/durapps/spark-store/bin/apt-fast-conf/sources.list.d/sparkstore.list";
+
+  // Try with spark-store configs first
+  let cmdArgs = [
+    "download",
+    pkgname,
+    "--print-uris",
+    "-c",
+    aptFastConf,
+    "-o",
+    `Dir::Etc::sourcelist=${sourcesList}`,
+    "-o",
+    "Dir::Etc::sourceparts=/dev/null",
+  ];
+
+  if (!fs.existsSync(aptFastConf) || !fs.existsSync(sourcesList)) {
+    // Fallback to standard apt if spark configs don't exist
+    cmdArgs = ["LANGUAGE=en_US", "apt", "download", pkgname, "--print-uris"];
+  }
+
+  const { code, stdout } = await runCommandCapture("env", cmdArgs);
+  if (code !== 0) return null;
+
+  const match = stdout.match(/'([^']+)'\s+([^\s]+)\s+(\d+)\s+SHA512:([^\s]+)/);
+  if (match) {
+    return {
+      metalinkUrl: match[1],
+      filename: match[2],
+      size: match[3],
+      sha512: match[4],
+    };
+  }
+  return null;
+};
+
+// Fetch download URL, size, and filename from apm
+const getApmAppDownloadInfo = async (pkgname: string) => {
+  const { code, stdout } = await runCommandCapture("apm", [
+    "download",
+    pkgname,
+    "--print-uris",
+  ]);
+  if (code !== 0) return null;
+  // Try to parse standard apt format if apm uses it
+  const match = stdout.match(/'([^']+)'\s+([^\s]+)\s+(\d+)\s+SHA512:([^\s]+)/);
+  if (match) {
+    return {
+      metalinkUrl: match[1],
+      filename: match[2],
+      size: match[3],
+      sha512: match[4],
+    };
+  }
+  return null;
+};
+
+// Fetch app name and icon from desktop files
+const getAppDesktopInfo = async (pkgname: string) => {
+  const { code, stdout } = await runCommandCapture("dpkg", ["-L", pkgname]);
+  if (code !== 0) return { name: pkgname, icon: "" };
+
+  const lines = stdout.split("\n");
+  const desktopFiles = lines.filter(
+    (l: string) =>
+      l.endsWith(".desktop") &&
+      (l.includes("/usr/share/applications/") || l.includes("/opt/apps/")),
+  );
+
+  let appName = pkgname;
+  let iconName = "";
+
+  for (const file of desktopFiles) {
+    if (!fs.existsSync(file)) continue;
+    try {
+      const content = fs.readFileSync(file, "utf8");
+
+      if (content.match(/^NoDisplay=(true|True)/m)) continue;
+
+      const nameMatch =
+        content.match(/^Name\[?zh_CN\]?=(.+)$/m) ||
+        content.match(/^Name=(.+)$/m);
+      if (nameMatch) appName = nameMatch[1].trim();
+
+      const iconMatch = content.match(/^Icon=(.+)$/m);
+      if (iconMatch) iconName = iconMatch[1].trim();
+
+      if (appName !== pkgname) break;
+    } catch {
+      // ignore
+    }
+  }
+
+  // Resolve icon path if it's a relative name
+  let iconPath = "";
+  if (iconName) {
+    if (iconName.startsWith("/")) {
+      if (fs.existsSync(iconName)) iconPath = iconName;
+    } else {
+      const possiblePaths = [
+        `/usr/share/pixmaps/${iconName}.png`,
+        `/usr/share/icons/hicolor/48x48/apps/${iconName}.png`,
+        `/usr/share/icons/hicolor/scalable/apps/${iconName}.svg`,
+        `/opt/apps/${pkgname}/entries/icons/hicolor/48x48/apps/${iconName}.png`,
+      ];
+      for (const p of possiblePaths) {
+        if (fs.existsSync(p)) {
+          iconPath = p;
+          break;
+        }
+      }
+    }
+  }
+
+  return { name: appName, icon: iconPath };
+};
+
 const getIgnoredUpdates = (): string[] => {
   try {
     const ignoredPath = path.join(
@@ -787,10 +908,38 @@ ipcMain.on("remove-installed", async (_event, payload) => {
 ipcMain.handle("list-upgradable", async () => {
   logger.info("Listing upgradable apps...");
 
-  const [aptssRes, apmRes] = await Promise.all([
-    runCommandCapture(SHELL_CALLER_PATH, ["aptss", "list", "--upgradable"]),
-    runCommandCapture("apm", ["list", "--upgradable"]),
-  ]);
+  // Instead of fetching all system updates with aptss list --upgradable,
+  // use Spark-Store specific config if available, fallback to aptss otherwise
+  const aptFastConf =
+    "/opt/durapps/spark-store/bin/apt-fast-conf/aptss-apt.conf";
+  const sourcesList =
+    "/opt/durapps/spark-store/bin/apt-fast-conf/sources.list.d/sparkstore.list";
+  let aptssRes;
+
+  if (fs.existsSync(aptFastConf) && fs.existsSync(sourcesList)) {
+    aptssRes = await runCommandCapture("env", [
+      "LANGUAGE=en_US",
+      "apt",
+      "-c",
+      aptFastConf,
+      "list",
+      "--upgradable",
+      "-o",
+      `Dir::Etc::sourcelist=${sourcesList}`,
+      "-o",
+      "Dir::Etc::sourceparts=/dev/null",
+      "-o",
+      "APT::Get::List-Cleanup=0",
+    ]);
+  } else {
+    aptssRes = await runCommandCapture(SHELL_CALLER_PATH, [
+      "aptss",
+      "list",
+      "--upgradable",
+    ]);
+  }
+
+  const apmRes = await runCommandCapture("apm", ["list", "--upgradable"]);
 
   if (aptssRes.code !== 0) {
     logger.error(
@@ -814,19 +963,34 @@ ipcMain.handle("list-upgradable", async () => {
       isIgnored: boolean;
       isCrossUpgrade: boolean;
       type: "spark" | "apm";
+      metalinkUrl?: string;
+      filename?: string;
+      size?: string;
+      sha512?: string;
+      icon?: string;
+      name?: string;
     }
   >();
 
   for (const app of aptssApps) {
+    const desktopInfo = await getAppDesktopInfo(app.pkgname);
+    const downloadInfo = await getSparkAppDownloadInfo(app.pkgname);
+
     mergedAppsMap.set(app.pkgname, {
       ...app,
       isIgnored: ignoredUpdates.includes(app.pkgname),
       isCrossUpgrade: false,
       type: "spark",
+      name: desktopInfo.name,
+      icon: desktopInfo.icon,
+      ...(downloadInfo || {}),
     });
   }
 
   for (const app of apmApps) {
+    const desktopInfo = await getAppDesktopInfo(app.pkgname);
+    const downloadInfo = await getApmAppDownloadInfo(app.pkgname);
+
     const existing = mergedAppsMap.get(app.pkgname);
     if (existing) {
       // Compare versions
@@ -842,15 +1006,20 @@ ipcMain.handle("list-upgradable", async () => {
           isIgnored: ignoredUpdates.includes(app.pkgname),
           isCrossUpgrade: true, // Needs remove then install
           type: "apm",
+          name: desktopInfo.name,
+          icon: desktopInfo.icon,
+          ...(downloadInfo || {}),
         });
       } else {
         // Spark version is higher or equal, keep them separate or let user choose.
-        // For simplicity, if APM <= Spark, we keep both in the list. To do this we need to alter the key.
         mergedAppsMap.set(`${app.pkgname}-apm`, {
           ...app,
           isIgnored: ignoredUpdates.includes(app.pkgname),
           isCrossUpgrade: false,
           type: "apm",
+          name: desktopInfo.name,
+          icon: desktopInfo.icon,
+          ...(downloadInfo || {}),
         });
       }
     } else {
@@ -859,6 +1028,9 @@ ipcMain.handle("list-upgradable", async () => {
         isIgnored: ignoredUpdates.includes(app.pkgname),
         isCrossUpgrade: false,
         type: "apm",
+        name: desktopInfo.name,
+        icon: desktopInfo.icon,
+        ...(downloadInfo || {}),
       });
     }
   }

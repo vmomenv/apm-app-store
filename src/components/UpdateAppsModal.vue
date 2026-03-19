@@ -20,7 +20,7 @@
               软件更新
             </p>
             <p class="text-sm text-slate-500 dark:text-slate-400">
-              可更新的 APM 应用
+              可更新的应用
             </p>
           </div>
           <div class="flex flex-wrap gap-2">
@@ -97,18 +97,50 @@
                   v-model="app.selected"
                   :disabled="app.upgrading || app.isIgnored"
                 />
+                <img
+                  v-if="app.icon"
+                  :src="'file://' + app.icon"
+                  class="h-10 w-10 rounded-xl object-contain bg-white p-1 border border-slate-100 dark:border-slate-800"
+                  @error="app.icon = undefined"
+                />
+                <div
+                  v-else
+                  class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                >
+                  <i class="fas fa-cube text-xl"></i>
+                </div>
                 <div>
                   <p class="font-semibold text-slate-900 dark:text-white">
-                    {{ app.pkgname }}
+                    {{ app.name || app.pkgname }}
+                    <span
+                      v-if="app.name && app.name !== app.pkgname"
+                      class="ml-1 text-xs text-slate-400 font-normal"
+                      >({{ app.pkgname }})</span
+                    >
                     <span
                       v-if="app.isCrossUpgrade"
                       class="ml-2 text-xs text-brand bg-brand/10 px-2 py-0.5 rounded-md"
                       >迁移至 APM</span
                     >
+                    <span
+                      v-if="app.type === 'spark'"
+                      class="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md dark:bg-amber-900/20"
+                      >星火</span
+                    >
+                    <span
+                      v-if="app.type === 'apm' && !app.isCrossUpgrade"
+                      class="ml-2 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md dark:bg-blue-900/20"
+                      >APM</span
+                    >
                   </p>
                   <p class="text-sm text-slate-500 dark:text-slate-400">
                     当前 {{ app.currentVersion || "-" }} · 更新至
                     {{ app.newVersion || "-" }}
+                    <span v-if="app.size"
+                      >·
+                      {{ (parseInt(app.size) / 1024 / 1024).toFixed(2) }}
+                      MB</span
+                    >
                   </p>
                 </div>
               </div>

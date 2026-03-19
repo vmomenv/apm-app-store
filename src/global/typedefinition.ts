@@ -115,6 +115,12 @@ export interface App {
 }
 
 export interface UpdateAppItem {
+  metalinkUrl?: string;
+  filename?: string;
+  size?: string;
+  sha512?: string;
+  icon?: string;
+  name?: string;
   pkgname: string;
   currentVersion?: string;
   newVersion?: string;
