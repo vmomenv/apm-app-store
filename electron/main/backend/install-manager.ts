@@ -788,7 +788,7 @@ ipcMain.handle("list-upgradable", async () => {
   logger.info("Listing upgradable apps...");
 
   const [aptssRes, apmRes] = await Promise.all([
-    runCommandCapture(SHELL_CALLER_PATH, ["aptss", "list", "--upgradable"]),
+    runCommandCapture("aptss", ["list", "--upgradable"]),
     runCommandCapture("apm", ["list", "--upgradable"]),
   ]);
 

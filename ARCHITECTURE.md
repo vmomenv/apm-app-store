@@ -100,6 +100,7 @@ flowchart TD
 
 - **功能**：该脚本内部封装了 `pkexec` 等提权逻辑。当调用 `shell-caller.sh aptss install ...` 时，如果系统需要提权，会自动弹出图形化的 Polkit 密码输入框。
 - **安全性**：主进程避免使用 `shell: true`，而是将参数作为数组传递给 `shell-caller.sh`，防止命令注入漏洞。
+- **白名单限制**：为防止越权，`shell-caller.sh` 内部维护了一个严格的命令白名单（仅包含如 `install`, `remove` 等高危系统操作）。非白名单内的指令（如 `aptss list --upgradable` 查询操作）会被拒绝并报出 “拒绝执行 aptss 白名单外的指令” 的错误。因此，这类无提权需求的指令应该直接使用普通用户的身份调用。
 
 ### apm-launcher
 
