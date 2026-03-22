@@ -36,6 +36,15 @@ contextBridge.exposeInMainWorld("apm_store", {
       return arch;
     }
   })(),
+  version: (() => {
+    // 从 package.json 读取版本号
+    try {
+      const pkg = require("../../package.json");
+      return pkg.version || "unknown";
+    } catch {
+      return "unknown";
+    }
+  })(),
 });
 
 // --------- Preload scripts loading ---------

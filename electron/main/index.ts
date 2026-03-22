@@ -19,6 +19,28 @@ import { isLoaded } from "../global.js";
 import { tasks } from "./backend/install-manager.js";
 import { sendTelemetryOnce } from "./backend/telemetry.js";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+process.env.APP_ROOT = path.join(__dirname, "../..");
+
+/** 与项目 package.json 一致的版本号：打包用 app.getVersion()，未打包时读 package.json */
+function getAppVersion(): string {
+  if (app.isPackaged) return app.getVersion();
+  const pkgPath = path.join(process.env.APP_ROOT ?? __dirname, "package.json");
+  try {
+    const raw = fs.readFileSync(pkgPath, "utf8");
+    const pkg = JSON.parse(raw) as { version?: string };
+    return typeof pkg.version === "string" ? pkg.version : "dev";
+  } catch {
+    return "dev";
+  }
+}
+
+// 处理 --version 参数（在单实例检查之前）
+if (process.argv.includes("--version") || process.argv.includes("-v")) {
+  console.log(getAppVersion());
+  process.exit(0);
+}
+
 // Assure single instance application
 if (!app.requestSingleInstanceLock()) {
   app.exit(0);
@@ -28,7 +50,6 @@ import "./backend/install-manager.js";
 import "./handle-url-scheme.js";
 
 const logger = pino({ name: "index.ts" });
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // The built directory structure
 //
@@ -40,8 +61,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // ├─┬ dist
 // │ └── index.html    > Electron-Renderer
 //
-process.env.APP_ROOT = path.join(__dirname, "../..");
-
 export const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 export const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
@@ -64,18 +83,6 @@ if (!app.requestSingleInstanceLock()) {
 let win: BrowserWindow | null = null;
 const preload = path.join(__dirname, "../preload/index.mjs");
 const indexHtml = path.join(RENDERER_DIST, "index.html");
-/** 与项目 package.json 一致的版本号：打包用 app.getVersion()，未打包时读 package.json */
-function getAppVersion(): string {
-  if (app.isPackaged) return app.getVersion();
-  const pkgPath = path.join(process.env.APP_ROOT ?? __dirname, "package.json");
-  try {
-    const raw = fs.readFileSync(pkgPath, "utf8");
-    const pkg = JSON.parse(raw) as { version?: string };
-    return typeof pkg.version === "string" ? pkg.version : "dev";
-  } catch {
-    return "dev";
-  }
-}
 
 const getUserAgent = (): string => {
   return `Spark-Store/${getAppVersion()}`;

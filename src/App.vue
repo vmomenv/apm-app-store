@@ -23,6 +23,7 @@
         @toggle-theme="toggleTheme"
         @select-category="selectCategory"
         @close="isSidebarOpen = false"
+        @open-about="openAboutModal"
       />
     </aside>
 
@@ -132,6 +133,11 @@
       @close="closeUninstallModal"
       @success="onUninstallSuccess"
     />
+
+    <AboutModal
+      :show="showAboutModal"
+      @close="closeAboutModal"
+    />
   </div>
 </template>
 
@@ -150,6 +156,7 @@ import DownloadDetail from "./components/DownloadDetail.vue";
 import InstalledAppsModal from "./components/InstalledAppsModal.vue";
 import UpdateAppsModal from "./components/UpdateAppsModal.vue";
 import UninstallConfirmModal from "./components/UninstallConfirmModal.vue";
+import AboutModal from "./components/AboutModal.vue";
 import {
   APM_STORE_BASE_URL,
   currentApp,
@@ -240,6 +247,7 @@ const updateLoading = ref(false);
 const updateError = ref("");
 const showUninstallModal = ref(false);
 const uninstallTargetApp: Ref<App | null> = ref(null);
+const showAboutModal = ref(false);
 
 /** 启动参数 --no-apm => 仅 Spark；--no-spark => 仅 APM；由主进程 IPC 提供 */
 const storeFilter = ref<"spark" | "apm" | "both">("both");
@@ -832,6 +840,14 @@ watchDownloadsChange(installCompleteCallback);
 
 const uninstallInstalledApp = (app: App) => {
   requestUninstall(app);
+};
+
+const openAboutModal = () => {
+  showAboutModal.value = true;
+};
+
+const closeAboutModal = () => {
+  showAboutModal.value = false;
 };
 
 // TODO: 目前 APM 商店不能暂停下载

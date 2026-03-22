@@ -17,17 +17,19 @@
           >
         </div>
       </div>
-      <button
-        type="button"
-        class="inline-flex h-10 w-10 items-center justify-center rounded-2xl text-slate-400 hover:bg-slate-100 lg:hidden dark:hover:bg-slate-800"
-        @click="$emit('close')"
-        title="关闭侧边栏"
-      >
-        <i class="fas fa-times"></i>
-      </button>
+      <div class="flex items-center gap-1">
+        <ThemeToggle :theme-mode="themeMode" @toggle="toggleTheme" />
+        <button
+          type="button"
+          class="inline-flex h-10 w-10 items-center justify-center rounded-2xl text-slate-400 hover:bg-slate-100 lg:hidden dark:hover:bg-slate-800"
+          @click="$emit('close')"
+          title="关闭侧边栏"
+        >
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
     </div>
 
-    <ThemeToggle :theme-mode="themeMode" @toggle="toggleTheme" />
     <StoreModeSwitcher />
 
     <div class="flex-1 space-y-2 overflow-y-auto scrollbar-muted pr-2">
@@ -84,6 +86,17 @@
         >
       </button>
     </div>
+
+    <div class="border-t border-slate-200 pt-4 dark:border-slate-800">
+      <button
+        type="button"
+        class="flex w-full items-center gap-3 rounded-2xl border border-transparent px-4 py-3 text-left text-sm font-medium text-slate-600 transition hover:border-brand/30 hover:bg-brand/5 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 dark:text-slate-300 dark:hover:bg-slate-800"
+        @click="openAbout"
+      >
+        <i class="fas fa-info-circle"></i>
+        <span>关于</span>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -103,6 +116,7 @@ const emit = defineEmits<{
   (e: "toggle-theme"): void;
   (e: "select-category", category: string): void;
   (e: "close"): void;
+  (e: "open-about"): void;
 }>();
 
 const toggleTheme = () => {
@@ -111,5 +125,9 @@ const toggleTheme = () => {
 
 const selectCategory = (category: string) => {
   emit("select-category", category);
+};
+
+const openAbout = () => {
+  emit("open-about");
 };
 </script>
