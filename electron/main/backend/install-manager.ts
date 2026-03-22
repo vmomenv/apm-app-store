@@ -383,38 +383,92 @@ async function processNextInQueue() {
         `--dir=${downloadDir}`,
         "--allow-overwrite=true",
         "--summary-interval=1",
+        "--connect-timeout=15",
+        "--timeout=15",
+        "--max-tries=3",
+        "--retry-wait=5",
+        "--max-concurrent-downloads=4",
+        "--min-split-size=1M",
+        "--lowest-speed-limit=1K",
         "-M",
         metalinkPath,
       ];
 
       sendStatus("downloading");
-      sendLog(`启动下载: aria2c ${aria2Args.join(" ")}`);
 
-      await new Promise<void>((resolve, reject) => {
-        const child = spawn("aria2c", aria2Args);
-        task.download_process = child;
+      // 下载重试逻辑：卡在0% 30秒则重启，最多3次
+      const maxRetries = 3;
+      let retryCount = 0;
+      let downloadSuccess = false;
 
-        child.stdout.on("data", (data) => {
-          const str = data.toString();
-          // Match ( 12%) or (12%)
-          const match = str.match(/[0-9]+(\.[0-9]+)?%/g);
-          if (match) {
-            const p = parseFloat(match.at(-1)) / 100;
-            webContents?.send("install-progress", { id, progress: p });
+      while (retryCount < maxRetries && !downloadSuccess) {
+        if (retryCount > 0) {
+          sendLog(`第 ${retryCount} 次重试下载...`);
+          webContents?.send("install-progress", { id, progress: 0 });
+        }
+
+        try {
+          await new Promise<void>((resolve, reject) => {
+            sendLog(`启动下载: aria2c ${aria2Args.join(" ")}`);
+            const child = spawn("aria2c", aria2Args);
+            task.download_process = child;
+
+            let lastProgressTime = Date.now();
+            let lastProgress = 0;
+            const zeroProgressTimeout = 30000; // 0%卡死30秒超时
+            const progressCheckInterval = 3000; // 每3秒检查一次
+
+            // 设置超时检测定时器
+            const timeoutChecker = setInterval(() => {
+              const now = Date.now();
+              // 只在进度为0时检查超时
+              if (lastProgress === 0 && now - lastProgressTime > zeroProgressTimeout) {
+                clearInterval(timeoutChecker);
+                child.kill();
+                reject(new Error(`下载卡在0%超过 ${zeroProgressTimeout / 1000} 秒`));
+              }
+            }, progressCheckInterval);
+
+            child.stdout.on("data", (data) => {
+              const str = data.toString();
+              // Match ( 12%) or (12%)
+              const match = str.match(/[0-9]+(\.[0-9]+)?%/g);
+              if (match) {
+                const p = parseFloat(match.at(-1)) / 100;
+                if (p > lastProgress) {
+                  lastProgress = p;
+                  lastProgressTime = Date.now();
+                }
+                webContents?.send("install-progress", { id, progress: p });
+              }
+            });
+            child.stderr.on("data", (d) => sendLog(`aria2c: ${d}`));
+
+            child.on("close", (code) => {
+              clearInterval(timeoutChecker);
+              if (code === 0) {
+                webContents?.send("install-progress", { id, progress: 1 });
+                resolve();
+              } else {
+                reject(new Error(`Aria2c exited with code ${code}`));
+              }
+            });
+            child.on("error", (err) => {
+              clearInterval(timeoutChecker);
+              reject(err);
+            });
+          });
+          downloadSuccess = true;
+        } catch (err) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            throw new Error(`下载失败，已重试 ${maxRetries} 次: ${err}`);
           }
-        });
-        child.stderr.on("data", (d) => sendLog(`aria2c: ${d}`));
-
-        child.on("close", (code) => {
-          if (code === 0) {
-            webContents?.send("install-progress", { id, progress: 1 });
-            resolve();
-          } else {
-            reject(new Error(`Aria2c exited with code ${code}`));
-          }
-        });
-        child.on("error", reject);
-      });
+          sendLog(`下载失败，准备重试 (${retryCount}/${maxRetries})`);
+          // 等待2秒后重试
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
     }
 
     // 2. Install Phase
@@ -571,20 +625,6 @@ ipcMain.handle("check-installed", async (_event, payload: any) => {
     if (isInstalled) return true;
   }
 
-  // 如果脚本不存在或检测不到，使用 dpkg-query 作为后备
-  logger.info(`尝试使用 dpkg-query 检测: ${pkgname}`);
-  const { code, stdout } = await runCommandCapture("dpkg-query", [
-    "-W",
-    "-f=${Status}",
-    pkgname,
-  ]);
-
-  if (code === 0 && stdout.includes("install ok installed")) {
-    isInstalled = true;
-    logger.info(`应用已安装 (dpkg-query 检测): ${pkgname}`);
-  } else {
-    logger.info(`应用未安装 (dpkg-query 检测): ${pkgname}`);
-  }
 
   return isInstalled;
 });
@@ -610,7 +650,7 @@ ipcMain.on("remove-installed", async (_event, payload) => {
   if (origin === "spark") {
     execParams.push("aptss", "remove", pkgname);
   } else {
-    execParams.push("apm", "remove", "-y", pkgname);
+    execParams.push("apm", "autoremove", "-y", pkgname);
   }
 
   const child = spawn(execCommand, execParams, {
@@ -724,7 +764,7 @@ ipcMain.handle("launch-app", async (_event, payload: any) => {
   let execParams = ["start", pkgname];
 
   if (origin === "apm") {
-    execCommand = "/opt/spark-store/extras/apm-launcher";
+    execCommand = "apm";
     execParams = ["launch", pkgname];
   }
 

@@ -1,6 +1,6 @@
 {
   "name": "spark-store",
-  "version": "4.9.9alpha3",
+  "version": "4.9.9alpha4",
   "main": "dist-electron/main/index.js",
   "description": "Client for Spark App Store",
   "author": "elysia-best <elysia-best@simplelinux.cn.eu.org>",
