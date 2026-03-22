@@ -383,7 +383,7 @@ async function processNextInQueue() {
         `--dir=${downloadDir}`,
         "--allow-overwrite=true",
         "--summary-interval=1",
-        "--connect-timeout=15",
+        "--connect-timeout=10",
         "--timeout=15",
         "--max-tries=3",
         "--retry-wait=5",
