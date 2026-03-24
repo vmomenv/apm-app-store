@@ -15,4 +15,9 @@ interface Window {
   };
 }
 
+// IPC channel type definitions
+declare interface IpcChannels {
+  "get-app-version": () => string;
+}
+
 declare const __APP_VERSION__: string;

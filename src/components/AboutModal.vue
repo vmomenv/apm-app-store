@@ -111,11 +111,15 @@ const emit = defineEmits<{
 
 const version = ref("unknown");
 
-onMounted(() => {
-  // 从预加载脚本获取版本号
-  const apmStore = (window as any).apm_store;
-  if (apmStore?.version) {
-    version.value = apmStore.version;
+onMounted(async () => {
+  // 通过 IPC 从主进程获取版本号
+  try {
+    const appVersion = await window.ipcRenderer.invoke("get-app-version");
+    if (appVersion) {
+      version.value = appVersion;
+    }
+  } catch {
+    version.value = "unknown";
   }
 });
 

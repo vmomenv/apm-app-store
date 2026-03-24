@@ -105,6 +105,8 @@ ipcMain.handle("get-store-filter", (): "spark" | "apm" | "both" =>
   getStoreFilterFromArgv(),
 );
 
+ipcMain.handle("get-app-version", (): string => getAppVersion());
+
 async function createWindow() {
   win = new BrowserWindow({
     title: "星火应用商店",
