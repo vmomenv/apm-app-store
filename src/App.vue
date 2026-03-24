@@ -831,12 +831,8 @@ const onUninstallSuccess = () => {
   }
 };
 
-const installCompleteCallback = (pkgname?: string, status?: string) => {
-  if (
-    currentApp.value &&
-    (!pkgname || currentApp.value.pkgname === pkgname) &&
-    status === "completed"
-  ) {
+const installCompleteCallback = (pkgname?: string) => {
+  if (currentApp.value && (!pkgname || currentApp.value.pkgname === pkgname)) {
     checkAppInstalled(currentApp.value);
   }
 };
