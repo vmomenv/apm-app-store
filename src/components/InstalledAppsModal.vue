@@ -12,9 +12,11 @@
       class="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/70 px-4 py-10"
     >
       <div
-        class="w-full max-w-4xl max-h-[85vh] overflow-y-auto scrollbar-nowidth scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 rounded-3xl border border-white/10 bg-white/95 p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+        class="flex w-full max-w-4xl max-h-[85vh] flex-col rounded-3xl border border-white/10 bg-white/95 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
       >
-        <div class="flex items-start justify-between">
+        <div
+          class="flex items-start justify-between border-b border-slate-200/70 p-6 dark:border-slate-800/70"
+        >
           <div>
             <p class="text-2xl font-semibold text-slate-900 dark:text-white">
               已安装应用
@@ -44,7 +46,9 @@
           </div>
         </div>
 
-        <div class="mt-6 space-y-4">
+        <div
+          class="flex-1 overflow-y-auto scrollbar-nowidth scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 p-6 space-y-4"
+        >
           <div
             v-if="loading"
             class="rounded-2xl border border-dashed border-slate-200/80 px-4 py-10 text-center text-slate-500 dark:border-slate-800/80 dark:text-slate-400"
