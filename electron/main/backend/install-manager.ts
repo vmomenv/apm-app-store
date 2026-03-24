@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import pino from "pino";
 
-import { ChannelPayload, InstalledAppInfo } from "../../typedefinition";
+import { ChannelPayload } from "../../typedefinition";
 import axios from "axios";
 
 const logger = pino({ name: "install-manager" });
@@ -77,28 +77,6 @@ const runCommandCapture = async (execCommand: string, execParams: string[]) => {
       });
     },
   );
-};
-
-const parseInstalledList = (output: string) => {
-  const apps: Array<InstalledAppInfo> = [];
-  const lines = output.split("\n");
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    if (trimmed.startsWith("Listing")) continue;
-    if (trimmed.startsWith("[INFO]")) continue;
-
-    const match = trimmed.match(/^(\S+)\/\S+,\S+\s+(\S+)\s+(\S+)\s+\[(.+)\]$/);
-    if (!match) continue;
-    apps.push({
-      pkgname: match[1],
-      version: match[2],
-      arch: match[3],
-      flags: match[4],
-      raw: trimmed,
-    });
-  }
-  return apps;
 };
 
 /** 检测本机是否已安装 apm 命令 */
@@ -251,7 +229,8 @@ ipcMain.on("queue-install", async (event, download_json) => {
           type: "info",
           title: "APM 安装成功",
           message: "恭喜您，APM 已成功安装",
-          detail: "APM 应用需重启后方可展示和使用，若完成安装后无法在应用列表中展示，请重启电脑后继续。",
+          detail:
+            "APM 应用需重启后方可展示和使用，若完成安装后无法在应用列表中展示，请重启电脑后继续。",
           buttons: ["确定"],
           defaultId: 0,
         });
@@ -422,10 +401,15 @@ async function processNextInQueue() {
             const timeoutChecker = setInterval(() => {
               const now = Date.now();
               // 只在进度为0时检查超时
-              if (lastProgress === 0 && now - lastProgressTime > zeroProgressTimeout) {
+              if (
+                lastProgress === 0 &&
+                now - lastProgressTime > zeroProgressTimeout
+              ) {
                 clearInterval(timeoutChecker);
                 child.kill();
-                reject(new Error(`下载卡在0%超过 ${zeroProgressTimeout / 1000} 秒`));
+                reject(
+                  new Error(`下载卡在0%超过 ${zeroProgressTimeout / 1000} 秒`),
+                );
               }
             }, progressCheckInterval);
 
@@ -466,7 +450,7 @@ async function processNextInQueue() {
           }
           sendLog(`下载失败，准备重试 (${retryCount}/${maxRetries})`);
           // 等待2秒后重试
-          await new Promise(r => setTimeout(r, 2000));
+          await new Promise((r) => setTimeout(r, 2000));
         }
       }
     }
@@ -573,8 +557,11 @@ ipcMain.handle("check-installed", async (_event, payload: any) => {
       "--installed",
     ]);
     if (code === 0) {
-      // eslint-disable-next-line no-control-regex
-      const cleanStdout = stdout.replace(/\x1b\[[0-9;]*m/g, "");
+      const cleanStdout = stdout.replace(
+        // eslint-disable-next-line no-control-regex
+        /\x1b\[[0-9;]*m/g,
+        "",
+      );
       const lines = cleanStdout.split("\n");
       for (const line of lines) {
         const trimmed = line.trim();
@@ -624,7 +611,6 @@ ipcMain.handle("check-installed", async (_event, payload: any) => {
 
     if (isInstalled) return true;
   }
-
 
   return isInstalled;
 });
@@ -691,9 +677,133 @@ ipcMain.on("remove-installed", async (_event, payload) => {
   });
 });
 
+ipcMain.handle("list-installed", async () => {
+  const apmBasePath = "/var/lib/apm/apm/files/ace-env/var/lib/apm";
+
+  try {
+    if (!fs.existsSync(apmBasePath)) {
+      logger.warn(`APM base path not found: ${apmBasePath}`);
+      return {
+        success: false,
+        message: "APM base path not found",
+        apps: [],
+      };
+    }
+
+    const packages = fs.readdirSync(apmBasePath, { withFileTypes: true });
+    const installedApps: Array<{
+      pkgname: string;
+      name: string;
+      version: string;
+      arch: string;
+      flags: string;
+      origin: "spark" | "apm";
+      icon?: string;
+      isDependency: boolean;
+    }> = [];
+
+    for (const pkg of packages) {
+      if (!pkg.isDirectory()) continue;
+
+      const pkgname = pkg.name;
+      const pkgPath = path.join(apmBasePath, pkgname);
+
+      const { code, stdout } = await runCommandCapture("apm", [
+        "list",
+        pkgname,
+      ]);
+      if (code !== 0) {
+        logger.warn(`Failed to list package ${pkgname}: ${stdout}`);
+        continue;
+      }
+
+      const cleanStdout = stdout.replace(
+        // eslint-disable-next-line no-control-regex
+        /\x1b\[[0-9;]*m/g,
+        "",
+      );
+      const lines = cleanStdout.split("\n");
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (
+          !trimmed ||
+          trimmed.startsWith("Listing") ||
+          trimmed.startsWith("[INFO]") ||
+          trimmed.startsWith("警告")
+        )
+          continue;
+
+        const match = trimmed.match(
+          /^(\S+)\/\S+,\S+\s+(\S+)\s+(\S+)\s+\[(.+)\]$/,
+        );
+        if (!match) continue;
+
+        const [, listedPkgname, version, arch, flags] = match;
+        if (listedPkgname !== pkgname) continue;
+
+        let appName = pkgname;
+        let icon = "";
+        const entriesPath = path.join(pkgPath, "entries", "applications");
+        const hasEntries = fs.existsSync(entriesPath);
+
+        if (hasEntries) {
+          const desktopFiles = fs.readdirSync(entriesPath);
+          for (const file of desktopFiles) {
+            if (file.endsWith(".desktop")) {
+              const desktopPath = path.join(entriesPath, file);
+              const content = fs.readFileSync(desktopPath, "utf-8");
+              const nameMatch = content.match(/^Name=(.+)$/m);
+              const iconMatch = content.match(/^Icon=(.+)$/m);
+              if (nameMatch) appName = nameMatch[1].trim();
+              if (iconMatch) icon = iconMatch[1].trim();
+              break;
+            }
+          }
+        }
+
+        installedApps.push({
+          pkgname,
+          name: appName,
+          version,
+          arch,
+          flags,
+          origin: "apm",
+          icon: icon || undefined,
+          isDependency: !hasEntries,
+        });
+      }
+    }
+
+    installedApps.sort((a, b) => {
+      const getOrder = (app: { pkgname: string; isDependency: boolean }) => {
+        if (app.isDependency) return 2;
+        if (app.pkgname.startsWith("amber-pm")) return 1;
+        return 0;
+      };
+
+      const aOrder = getOrder(a);
+      const bOrder = getOrder(b);
+
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return a.pkgname.localeCompare(b.pkgname);
+    });
+
+    return { success: true, apps: installedApps };
+  } catch (error) {
+    logger.error(
+      `list-installed failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : String(error),
+      apps: [],
+    };
+  }
+});
+
 ipcMain.handle("list-upgradable", async () => {
-  const { code, stdout, stderr } = await runCommandCapture(SHELL_CALLER_PATH, [
-    "aptss",
+  const { code, stdout, stderr } = await runCommandCapture("apm", [
     "list",
     "--upgradable",
   ]);
@@ -710,6 +820,9 @@ ipcMain.handle("list-upgradable", async () => {
   return { success: true, apps };
 });
 
+ipcMain.handle("check-apm-available", async () => {
+  return await checkApmAvailable();
+});
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ipcMain.handle("uninstall-installed", async (_event, payload: any) => {

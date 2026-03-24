@@ -107,6 +107,7 @@ export interface App {
   installed?: boolean; // Frontend state
   flags?: string; // Tags in apm packages manager, e.g. "automatic" for dependencies
   arch?: string; // Architecture, e.g. "amd64", "arm64"
+  isDependency?: boolean; // Whether this is a dependency package
   currentStatus: "not-installed" | "installed"; // Current installation status
   isMerged?: boolean; // FLAG for overlapping apps
   sparkApp?: App; // Optional reference to the spark version
@@ -125,10 +126,14 @@ export interface UpdateAppItem {
 /**************Below are type from main process ********************/
 export interface InstalledAppInfo {
   pkgname: string;
+  name: string;
   version: string;
   arch: string;
   flags: string;
-  raw: string;
+  origin: "spark" | "apm";
+  icon?: string;
+  isDependency: boolean;
+  raw?: string;
 }
 
 /**

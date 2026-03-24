@@ -89,12 +89,21 @@
 
     <div class="border-t border-slate-200 pt-4 dark:border-slate-800">
       <button
+        v-if="apmAvailable"
         type="button"
         class="flex w-full items-center gap-3 rounded-2xl border border-transparent px-4 py-3 text-left text-sm font-medium text-slate-600 transition hover:border-brand/30 hover:bg-brand/5 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 dark:text-slate-300 dark:hover:bg-slate-800"
-        @click="openAbout"
+        @click="$emit('list')"
       >
-        <i class="fas fa-info-circle"></i>
-        <span>关于</span>
+        <i class="fas fa-download"></i>
+        <span>APM 应用管理</span>
+      </button>
+      <button
+        type="button"
+        class="flex w-full items-center gap-3 rounded-2xl border border-transparent px-4 py-3 text-left text-sm font-medium text-slate-600 transition hover:border-brand/30 hover:bg-brand/5 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 dark:text-slate-300 dark:hover:bg-slate-800"
+        @click="$emit('update')"
+      >
+        <i class="fas fa-sync-alt"></i>
+        <span>软件更新</span>
       </button>
     </div>
   </div>
@@ -110,13 +119,15 @@ defineProps<{
   activeCategory: string;
   categoryCounts: Record<string, number>;
   themeMode: "light" | "dark" | "auto";
+  apmAvailable: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: "toggle-theme"): void;
   (e: "select-category", category: string): void;
   (e: "close"): void;
-  (e: "open-about"): void;
+  (e: "list"): void;
+  (e: "update"): void;
 }>();
 
 const toggleTheme = () => {
@@ -125,9 +136,5 @@ const toggleTheme = () => {
 
 const selectCategory = (category: string) => {
   emit("select-category", category);
-};
-
-const openAbout = () => {
-  emit("open-about");
 };
 </script>

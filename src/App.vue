@@ -20,27 +20,32 @@
         :active-category="activeCategory"
         :category-counts="categoryCounts"
         :theme-mode="themeMode"
+        :apm-available="apmAvailable"
         @toggle-theme="toggleTheme"
         @select-category="selectCategory"
         @close="isSidebarOpen = false"
-        @open-about="openAboutModal"
+        @list="handleList"
+        @update="handleUpdate"
       />
     </aside>
 
-    <main class="flex-1 px-4 py-6 lg:px-10">
-      <AppHeader
-        :search-query="searchQuery"
-        :active-category="activeCategory"
-        :apps-count="filteredApps.length"
-        @update-search="handleSearchInput"
-        @search-focus="handleSearchFocus"
-        @update="handleUpdate"
-        @list="handleList"
-        @open-install-settings="handleOpenInstallSettings"
-        @toggle-sidebar="isSidebarOpen = !isSidebarOpen"
-      />
-      <template v-if="activeCategory === 'home'">
-        <div class="pt-6">
+    <main class="flex-1">
+      <div
+        class="sticky top-0 z-30 border-b border-slate-200/70 bg-slate-50/95 px-4 py-4 backdrop-blur lg:px-10 dark:border-slate-800/70 dark:bg-slate-950/95"
+      >
+        <AppHeader
+          :search-query="searchQuery"
+          :active-category="activeCategory"
+          :apps-count="filteredApps.length"
+          @update-search="handleSearchInput"
+          @search-focus="handleSearchFocus"
+          @open-install-settings="handleOpenInstallSettings"
+          @open-about="openAboutModal"
+          @toggle-sidebar="isSidebarOpen = !isSidebarOpen"
+        />
+      </div>
+      <div class="px-4 py-6 lg:px-10">
+        <template v-if="activeCategory === 'home'">
           <HomeView
             :links="homeLinks"
             :lists="homeLists"
@@ -48,15 +53,15 @@
             :error="homeError"
             @open-detail="openDetail"
           />
-        </div>
-      </template>
-      <template v-else>
-        <AppGrid
-          :apps="filteredApps"
-          :loading="loading"
-          @open-detail="openDetail"
-        />
-      </template>
+        </template>
+        <template v-else>
+          <AppGrid
+            :apps="filteredApps"
+            :loading="loading"
+            @open-detail="openDetail"
+          />
+        </template>
+      </div>
     </main>
 
     <AppDetailModal
@@ -134,10 +139,7 @@
       @success="onUninstallSuccess"
     />
 
-    <AboutModal
-      :show="showAboutModal"
-      @close="closeAboutModal"
-    />
+    <AboutModal :show="showAboutModal" @close="closeAboutModal" />
   </div>
 </template>
 
@@ -248,6 +250,7 @@ const updateError = ref("");
 const showUninstallModal = ref(false);
 const uninstallTargetApp: Ref<App | null> = ref(null);
 const showAboutModal = ref(false);
+const apmAvailable = ref(false);
 
 /** 启动参数 --no-apm => 仅 Spark；--no-spark => 仅 APM；由主进程 IPC 提供 */
 const storeFilter = ref<"spark" | "apm" | "both">("both");
@@ -403,16 +406,16 @@ const openDetail = async (app: App | Record<string, unknown>) => {
   if (fullApp.isMerged && (fullApp.sparkApp || fullApp.apmApp)) {
     const [sparkInstalled, apmInstalled] = await Promise.all([
       fullApp.sparkApp
-        ? window.ipcRenderer.invoke("check-installed", {
+        ? (window.ipcRenderer.invoke("check-installed", {
             pkgname: fullApp.sparkApp.pkgname,
             origin: "spark",
-          }) as Promise<boolean>
+          }) as Promise<boolean>)
         : Promise.resolve(false),
       fullApp.apmApp
-        ? window.ipcRenderer.invoke("check-installed", {
+        ? (window.ipcRenderer.invoke("check-installed", {
             pkgname: fullApp.apmApp.pkgname,
             origin: "apm",
-          }) as Promise<boolean>
+          }) as Promise<boolean>)
         : Promise.resolve(false),
     ]);
     if (sparkInstalled && !apmInstalled) {
@@ -425,9 +428,9 @@ const openDetail = async (app: App | Record<string, unknown>) => {
 
   const displayAppForScreenshots =
     fullApp.viewingOrigin !== undefined && fullApp.isMerged
-      ? (fullApp.viewingOrigin === "spark"
+      ? ((fullApp.viewingOrigin === "spark"
           ? fullApp.sparkApp
-          : fullApp.apmApp) ?? fullApp
+          : fullApp.apmApp) ?? fullApp)
       : fullApp;
 
   currentApp.value = fullApp;
@@ -762,6 +765,7 @@ const refreshInstalledApps = async () => {
         appInfo.flags = app.flags;
         appInfo.arch = app.arch;
         appInfo.currentStatus = "installed";
+        appInfo.isDependency = app.isDependency;
       } else {
         // 如果在当前应用列表中找不到该应用，创建一个最小的 App 对象
         appInfo = {
@@ -779,11 +783,12 @@ const refreshInstalledApps = async () => {
           update: "",
           size: "",
           img_urls: [],
-          icons: "",
+          icons: app.icon || "",
           origin: app.origin || (app.arch?.includes("apm") ? "apm" : "spark"),
           currentStatus: "installed",
           arch: app.arch,
           flags: app.flags,
+          isDependency: app.isDependency,
         };
       }
       installedApps.value.push(appInfo);
@@ -1061,6 +1066,12 @@ onMounted(async () => {
 
   // 从主进程获取启动参数（--no-apm / --no-spark），再加载数据
   storeFilter.value = await window.ipcRenderer.invoke("get-store-filter");
+
+  // 检查 apm 是否可用
+  if (storeFilter.value !== "spark") {
+    apmAvailable.value = await window.ipcRenderer.invoke("check-apm-available");
+  }
+
   await loadCategories();
 
   // 分类目录加载后，并行加载主页数据和所有应用列表

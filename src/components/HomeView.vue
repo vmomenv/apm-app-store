@@ -1,5 +1,5 @@
 <template>
-   <div class="space-y-8">
+  <div class="space-y-8">
     <div
       v-if="loading"
       class="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-slate-400"
@@ -21,7 +21,7 @@
           :key="link.url + link.name"
           :href="link.type === '_blank' ? undefined : link.url"
           @click.prevent="onLinkClick(link)"
-          class="flex flex-col items-start gap-2 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm hover:shadow-lg transition"
+          class="flex flex-col items-start gap-2 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm transition hover:shadow-lg dark:border-slate-800/70 dark:bg-slate-900/90"
           :title="link.more as string"
         >
           <img
@@ -29,10 +29,12 @@
             class="h-20 w-full object-contain"
             loading="lazy"
           />
-          <div class="text-base font-semibold text-slate-900">
+          <div class="text-base font-semibold text-slate-900 dark:text-white">
             {{ link.name }}
           </div>
-          <div class="text-sm text-slate-500">{{ link.more }}</div>
+          <div class="text-sm text-slate-500 dark:text-slate-400">
+            {{ link.more }}
+          </div>
         </a>
       </div>
 

@@ -33,7 +33,9 @@
                   class="h-24 w-24 rounded-3xl bg-white p-4 shadow-lg ring-1 ring-slate-900/5 dark:bg-slate-800"
                 />
               </div>
-              <h2 class="mb-2 text-2xl font-bold text-slate-900 dark:text-white">
+              <h2
+                class="mb-2 text-2xl font-bold text-slate-900 dark:text-white"
+              >
                 星火应用商店
               </h2>
               <p class="mb-4 text-sm text-slate-500 dark:text-slate-400">
@@ -42,16 +44,23 @@
               <div
                 class="mb-6 inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 dark:bg-slate-800"
               >
-                <span class="text-sm text-slate-600 dark:text-slate-300">版本号</span>
+                <span class="text-sm text-slate-600 dark:text-slate-300"
+                  >版本号</span
+                >
                 <span
                   class="font-mono text-sm font-semibold text-brand dark:text-brand"
                   >{{ version }}</span
                 >
               </div>
-              <p class="mb-6 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                星火应用商店是专为 Linux 设计的应用商店，提供丰富的应用资源和便捷的安装体验。
+              <p
+                class="mb-6 text-sm leading-relaxed text-slate-600 dark:text-slate-400"
+              >
+                星火应用商店是专为 Linux
+                设计的应用商店，提供丰富的应用资源和便捷的安装体验。
               </p>
-              <div class="flex justify-center gap-4 text-sm text-slate-500 dark:text-slate-400">
+              <div
+                class="flex justify-center gap-4 text-sm text-slate-500 dark:text-slate-400"
+              >
                 <a
                   href="https://gitee.com/spark-store-project/spark-store"
                   target="_blank"

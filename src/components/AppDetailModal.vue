@@ -97,9 +97,7 @@
                   : 'from-brand to-brand-dark'
               "
               @click="handleInstall"
-              :disabled="
-                installFeedback || isOtherVersionInstalled
-              "
+              :disabled="installFeedback || isOtherVersionInstalled"
             >
               <i
                 class="fas"
@@ -259,10 +257,7 @@
 <script setup lang="ts">
 import { computed, useAttrs, ref, watch } from "vue";
 import axios from "axios";
-import {
-  useInstallFeedback,
-  downloads,
-} from "../global/downloadStatus";
+import { useInstallFeedback, downloads } from "../global/downloadStatus";
 import { APM_STORE_BASE_URL } from "../global/storeConfig";
 import type { App } from "../global/typedefinition";
 
@@ -289,7 +284,7 @@ const appPkgname = computed(() => props.app?.pkgname);
 
 const isIconLoaded = ref(false);
 
-const viewingOrigin = ref<"spark" | "apm">("apm");
+const viewingOrigin = ref<"spark" | "apm">("spark");
 
 watch(
   () => props.app,
@@ -297,9 +292,9 @@ watch(
     isIconLoaded.value = false;
     if (newApp) {
       if (newApp.isMerged) {
-        // 若父组件已根据安装状态设置了优先展示的版本，则使用；否则默认 APM
+        // 若父组件已根据安装状态设置了优先展示的版本，则使用；否则默认 Spark
         viewingOrigin.value =
-          newApp.viewingOrigin ?? (newApp.apmApp ? "apm" : "spark");
+          newApp.viewingOrigin ?? (newApp.sparkApp ? "spark" : "apm");
       } else {
         viewingOrigin.value = newApp.origin;
       }
@@ -348,7 +343,9 @@ const installBtnText = computed(() => {
     return "已安装";
   }
   if (isOtherVersionInstalled.value) {
-    return viewingOrigin.value === "spark" ? "已安装 APM 版" : "已安装 Spark 版";
+    return viewingOrigin.value === "spark"
+      ? "已安装 APM 版"
+      : "已安装 Spark 版";
   }
   if (installFeedback.value) {
     const status = activeDownload.value?.status;
