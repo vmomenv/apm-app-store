@@ -1,5 +1,46 @@
 #!/bin/bash
 
+# 显示进度条并执行命令（支持 garma / zenity）
+run_with_progress() {
+    local title="$1"
+    local text="$2"
+    local cmd="$3"
+
+    # 检测可用的对话框工具
+    local tool=""
+    if command -v garma &> /dev/null; then
+        tool="garma"
+    elif command -v zenity &> /dev/null; then
+        tool="zenity"
+    else
+        echo "警告：未找到 garma 或 zenity，无法显示进度条。直接执行命令..." >&2
+        eval "$cmd"
+        return $?
+    fi
+
+    # 根据工具启动进度条
+    local progress_pid
+    if [[ "$tool" == "garma" ]]; then
+        # garma 的进度条用法（假设 --progress --pulsate 可用）
+        garma --progress --pulsate --title="$title" --text="$text" --no-cancel 2>/dev/null &
+        progress_pid=$!
+    else
+        # zenity 进度条 pulsate 模式
+        zenity --progress --pulsate --title="$title" --text="$text" --no-cancel 2>/dev/null &
+        progress_pid=$!
+    fi
+
+    # 执行实际命令
+    eval "$cmd"
+    local cmd_exit=$?
+
+    # 关闭进度条
+    kill "$progress_pid" 2>/dev/null
+    wait "$progress_pid" 2>/dev/null
+
+    return $cmd_exit
+}
+
 # 1. 检查是否提供了至少一个参数
 if [[ $# -eq 0 ]]; then
     echo "错误：未提供命令参数。"
@@ -80,15 +121,26 @@ case "$command_type" in
 
             # 根据确认结果执行
             if [[ $confirmed -eq 0 ]]; then
-                /usr/bin/aptss "${@:2}" -y 2>&1
-                exit_code=$?
+                # 1) 先更新软件源（带进度条）
+                echo "正在更新软件源..."
+                if ! run_with_progress "更新软件源" "正在更新软件源，请稍候..." "/usr/bin/aptss update"; then
+                    echo "错误：软件源更新失败，安装已终止。"
+                    exit 1
+                fi
+                # 2) 执行安装（带进度条）
+                echo "正在安装软件包..."
+                if ! run_with_progress "安装软件包" "正在安装: $packages，请稍候..." "/usr/bin/aptss ${@:2} -y"; then
+                    echo "错误：软件包安装失败。"
+                    exit 1
+                fi
+                exit_code=0
             else
                 echo "操作已取消"
                 exit 0
             fi
 
         else
-            # 非 remove 命令，拒绝执行
+            # 非 remove/install 命令，拒绝执行
             echo "拒绝执行 aptss 白名单外的指令"
             exit 1
         fi
