@@ -42,13 +42,21 @@ export function watchDownloadsChange(cb: (pkgname: string) => void) {
   );
 }
 
+export const downloadsByPkgname = computed(() => {
+  const map = new Map<string, DownloadItem>();
+  for (const item of downloads.value) {
+    map.set(item.pkgname, item);
+  }
+  return map;
+});
+
 export function useDownloadItemStatus(
   pkgname?: ComputedRef<string | undefined>,
 ) {
   const status: ComputedRef<DownloadItemStatus | undefined> = computed(() => {
     const name = unref(pkgname);
     if (!name) return;
-    const task = downloads.value.find((d) => d.pkgname === name);
+    const task = downloadsByPkgname.value.get(name);
     if (!task) return;
     return task.status;
   });
@@ -67,7 +75,7 @@ export function useInstallFeedback(pkgname?: ComputedRef<string | undefined>) {
   const installFeedback = computed(() => {
     const name = unref(pkgname);
     if (!name) return false;
-    const task = downloads.value.find((d) => d.pkgname === name);
+    const task = downloadsByPkgname.value.get(name);
     if (!task) return false;
     return task.status !== "completed" && task.status !== "failed";
   });
